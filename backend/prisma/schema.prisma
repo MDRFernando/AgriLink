@@ -1,0 +1,638 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Existing roles kept for backward compatibility:
+// business = Buyer, government = Admin
+enum UserRole {
+  farmer
+  business
+  government
+  transporter
+}
+
+enum ProductionStatus {
+  planned
+  growing
+  readyForHarvest
+  available
+  sold
+  expired
+}
+
+enum DemandStatus {
+  open
+  fulfilled
+  closed
+}
+
+enum InterestStatus {
+  pending
+  accepted
+  rejected
+}
+
+enum QualityGrade {
+  A
+  B
+  C
+}
+
+enum DataSourceKind {
+  DEMO_SEED
+  TRANSACTION_DERIVED
+  ADMIN_MANUAL
+  FARMER_SELF_REPORT
+}
+
+enum VerificationStatus {
+  pending
+  approved
+  rejected
+}
+
+enum AuctionStatus {
+  scheduled
+  open
+  closed
+  cancelled
+}
+
+enum OrderStatus {
+  pending_farmer
+  pending_buyer
+  confirmed
+  payment_pending
+  paid
+  delivery_required
+  in_transit
+  delivered
+  completed
+  cancelled
+  disputed
+}
+
+enum PaymentStatus {
+  pending
+  sandbox_success
+  sandbox_failed
+  cancelled
+  paid
+  failed
+  refunded
+  partially_refunded
+}
+
+enum NotificationAudience {
+  farmer
+  buyer
+  admin
+  transporter
+}
+
+enum DeliveryMethod {
+  bit_app_transport
+  own_transport
+}
+
+enum VehicleType {
+  pickup
+  small_lorry
+  medium_lorry
+  large_lorry
+}
+
+enum TransportStatus {
+  requested
+  matching
+  assigned
+  accepted
+  waiting_pickup
+  arrived_at_pickup
+  loaded
+  in_transit
+  arrived_at_destination
+  delivered
+  buyer_confirmed
+  completed
+  cancelled
+}
+
+enum DisputeType {
+  partial_delivery
+  damaged
+  missing
+  other
+}
+
+enum DisputeStatus {
+  open
+  under_review
+  resolved
+  rejected
+}
+
+model User {
+  id               String   @id @default(uuid())
+  email            String   @unique
+  passwordHash     String
+  name             String?
+  phone            String?
+  role             UserRole
+  organizationName String?
+  region           String?
+  isVerified       Boolean  @default(false)
+  nic              String?
+  address          String?
+  district         String?
+  province         String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  productions      Production[]
+  demands          DemandRequest[]
+  interests        PurchaseInterest[]
+  farmerProfile    FarmerProfile?
+  buyerProfile     BuyerProfile?
+  bids             Bid[]
+  buyerOrders      Order[]           @relation("BuyerOrders")
+  farmerOrders     Order[]           @relation("FarmerOrders")
+  paymentsAsBuyer  Payment[]         @relation("BuyerPayments")
+  paymentsAsFarmer Payment[]         @relation("FarmerPayments")
+  notifications    AppNotification[]
+  reviewsGiven     Review[]          @relation("Reviewer")
+  reviewsReceived  Review[]          @relation("Reviewee")
+  complaints           Complaint[]
+  auditLogs            AuditLog[]
+  transporterProfile   TransporterProfile?
+  deliveryAddresses    DeliveryAddress[]
+  buyerTransportReqs   TransportRequest[]  @relation("BuyerTransport")
+  farmerTransportReqs  TransportRequest[]  @relation("FarmerTransport")
+  assignedJobs         TransportRequest[]  @relation("AssignedTransporter")
+  transportPayments    TransportPayment[]  @relation("BuyerTransportPayments")
+  transporterSettlements TransportPayment[] @relation("TransporterSettlements")
+}
+
+model FarmerProfile {
+  id                         String   @id @default(uuid())
+  userId                     String   @unique
+  user                       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  farmLocation               String?
+  farmSizeAcres              Float?
+  cropTypesJson              String?
+  preferredCropsJson         String?
+  estimatedCapacityKg        Float?
+  traditionalFarmgatePriceKg Float?
+  harvestingCostPerKg        Float?
+  incomeBeforeBitApp         Float?
+  lat                        Float?
+  lng                        Float?
+  createdAt                  DateTime @default(now())
+  updatedAt                  DateTime @updatedAt
+}
+
+model BuyerProfile {
+  id                  String             @id @default(uuid())
+  userId              String             @unique
+  user                User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  nicOrBrn            String?
+  businessName        String?
+  businessType        String?
+  location            String?
+  lat                 Float?
+  lng                 Float?
+  verificationStatus  VerificationStatus @default(pending)
+  preferredCropsJson  String?
+  preferredPriceMin   Float?
+  preferredPriceMax   Float?
+  requiredQuantityKg  Float?
+  reliabilityScore    Float              @default(50)
+  verifiedAt          DateTime?
+  verifiedById        String?
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+}
+
+model Production {
+  id                        String           @id @default(uuid())
+  listingCode               String?          @unique
+  farmerId                  String
+  farmer                    User             @relation(fields: [farmerId], references: [id], onDelete: Cascade)
+  cropType                  String
+  variety                   String?
+  category                  String?
+  quantity                  Float
+  unit                      String
+  harvestDate               DateTime
+  region                    String
+  location                  String
+  status                    ProductionStatus @default(planned)
+  notes                     String?
+  qualityGrade              QualityGrade     @default(B)
+  minAcceptablePrice        Float?
+  preferredDeliveryLocation String?
+  description               String?
+  imagesJson                String?
+  createdAt                 DateTime         @default(now())
+  updatedAt                 DateTime         @updatedAt
+
+  interests PurchaseInterest[]
+  auction   Auction?
+
+  @@index([cropType, region, status, harvestDate])
+}
+
+model ListingSequence {
+  year       Int @id
+  lastNumber Int @default(0)
+}
+
+model DemandRequest {
+  id             String       @id @default(uuid())
+  requesterId    String
+  requester      User         @relation(fields: [requesterId], references: [id], onDelete: Cascade)
+  cropType       String
+  quantityNeeded Float
+  unit           String
+  deadline       DateTime
+  region         String
+  status         DemandStatus @default(open)
+  notes          String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([cropType, region, status])
+}
+
+model PurchaseInterest {
+  id           String         @id @default(uuid())
+  businessId   String
+  business     User           @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  productionId String
+  production   Production     @relation(fields: [productionId], references: [id], onDelete: Cascade)
+  quantity     Float
+  message      String?
+  status       InterestStatus @default(pending)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  @@index([businessId, status])
+  @@index([productionId, status])
+}
+
+model Auction {
+  id            String        @id @default(uuid())
+  productionId  String        @unique
+  production    Production    @relation(fields: [productionId], references: [id], onDelete: Cascade)
+  openingBid    Float
+  minBid        Float
+  minIncrement  Float
+  startTime     DateTime
+  endTime       DateTime
+  status        AuctionStatus @default(open)
+  winningBidId  String?
+  closedAt      DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  bids Bid[]
+}
+
+model Bid {
+  id        String   @id @default(uuid())
+  auctionId String
+  auction   Auction  @relation(fields: [auctionId], references: [id], onDelete: Cascade)
+  buyerId   String
+  buyer     User     @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+  amount    Float
+  createdAt DateTime @default(now())
+
+  @@index([auctionId, createdAt])
+}
+
+model Order {
+  id               String      @id @default(uuid())
+  auctionId        String      @unique
+  productionId     String
+  farmerId         String
+  farmer           User        @relation("FarmerOrders", fields: [farmerId], references: [id])
+  buyerId          String
+  buyer            User        @relation("BuyerOrders", fields: [buyerId], references: [id])
+  winningPriceKg   Float
+  quantityKg       Float
+  status           OrderStatus @default(pending_farmer)
+  farmerConfirmed  Boolean     @default(false)
+  buyerConfirmed   Boolean     @default(false)
+  remarks          String?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  events            OrderEvent[]
+  payment           Payment?
+  transportation    Transportation?
+  transportRequests TransportRequest[]
+  disputes          DeliveryDispute[]
+}
+
+model OrderEvent {
+  id        String      @id @default(uuid())
+  orderId   String
+  order     Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  status    OrderStatus
+  actorId   String?
+  action    String
+  remarks   String?
+  createdAt DateTime    @default(now())
+}
+
+model Payment {
+  id          String        @id @default(uuid())
+  orderId     String        @unique
+  order       Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  buyerId     String
+  buyer       User          @relation("BuyerPayments", fields: [buyerId], references: [id])
+  farmerId    String
+  farmer      User          @relation("FarmerPayments", fields: [farmerId], references: [id])
+  amount      Float
+  status      PaymentStatus @default(pending)
+  reference   String        @unique
+  paidAt      DateTime?
+  receiptNote String?
+  createdAt   DateTime      @default(now())
+}
+
+model Transportation {
+  id                 String   @id @default(uuid())
+  orderId            String   @unique
+  order              Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  farmerLocation     String?
+  buyerLocation      String?
+  distanceKm         Float
+  quantityKg         Float
+  estimatedCost      Float
+  vehicleRequirement String?
+  deliveryDate       DateTime?
+  createdAt          DateTime @default(now())
+}
+
+model MarketPrice {
+  id          String         @id @default(uuid())
+  cropType    String
+  variety     String?
+  district    String
+  grade       QualityGrade   @default(B)
+  pricePerKg  Float
+  recordedOn  DateTime
+  source      DataSourceKind
+  note        String?
+  createdAt   DateTime       @default(now())
+
+  @@index([cropType, district, recordedOn])
+}
+
+model AppNotification {
+  id        String                @id @default(uuid())
+  userId    String
+  user      User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  audience  NotificationAudience
+  title     String
+  body      String
+  readAt    DateTime?
+  createdAt DateTime              @default(now())
+}
+
+model Review {
+  id         String   @id @default(uuid())
+  reviewerId String
+  reviewer   User     @relation("Reviewer", fields: [reviewerId], references: [id])
+  revieweeId String
+  reviewee   User     @relation("Reviewee", fields: [revieweeId], references: [id])
+  orderId    String?
+  rating     Int
+  comment    String?
+  createdAt  DateTime @default(now())
+}
+
+model Complaint {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject   String
+  body      String
+  status    String   @default("open")
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  actorId    String?
+  actor      User?    @relation(fields: [actorId], references: [id])
+  action     String
+  entityType String
+  entityId   String?
+  metadata   String?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+}
+
+/// Anonymized research row — no name/email/NIC/phone.
+model ResearchObservation {
+  id                         String         @id @default(uuid())
+  participantCode            String
+  role                       String
+  district                   String?
+  province                   String?
+  farmSizeAcres              Float?
+  cropType                   String?
+  quantityKg                 Float?
+  traditionalPriceKg         Float?
+  bitAppPriceKg              Float?
+  transportationCost         Float?
+  harvestingCost             Float?
+  usedIntermediary           Boolean?
+  usedBitAppDirect           Boolean?
+  marketInfoAccess           Boolean?
+  incomeBefore               Float?
+  incomeAfter                Float?
+  satisfactionScore          Int?
+  source                     DataSourceKind
+  recordedAt                 DateTime       @default(now())
+}
+
+model DeliveryAddress {
+  id             String   @id @default(uuid())
+  buyerId        String
+  buyer          User     @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+  businessName   String
+  contactPerson  String
+  phone          String
+  address        String
+  city           String
+  latitude       Float?
+  longitude      Float?
+  instructions   String?
+  isDefault      Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  transportRequests TransportRequest[]
+}
+
+model TransporterProfile {
+  id                 String   @id @default(uuid())
+  userId             String   @unique
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company            String?
+  rating             Float    @default(4.5)
+  availabilityStatus String   @default("available")
+  serviceAreasJson   String?
+  lat                Float?
+  lng                Float?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  vehicles Vehicle[]
+}
+
+model Vehicle {
+  id             String      @id @default(uuid())
+  transporterId  String
+  transporter    TransporterProfile @relation(fields: [transporterId], references: [id], onDelete: Cascade)
+  vehicleNumber  String
+  vehicleType    VehicleType
+  capacityKg     Float
+  status         String      @default("active")
+  createdAt      DateTime    @default(now())
+
+  transportRequests TransportRequest[]
+}
+
+model TransportSequence {
+  year       Int @id
+  lastNumber Int @default(0)
+}
+
+model TransportPricingRule {
+  id          String      @id @default(uuid())
+  vehicleType VehicleType @unique
+  baseCharge  Float
+  perKm       Float
+  perKg       Float
+  loadingFee  Float       @default(0)
+  fuelSurchargePercent Float @default(0)
+  active      Boolean     @default(true)
+  updatedAt   DateTime    @updatedAt
+}
+
+model TransportRequest {
+  id                   String           @id @default(uuid())
+  requestCode          String           @unique
+  orderId              String
+  order                Order            @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  buyerId              String
+  buyer                User             @relation("BuyerTransport", fields: [buyerId], references: [id])
+  farmerId             String
+  farmer               User             @relation("FarmerTransport", fields: [farmerId], references: [id])
+  deliveryAddressId    String?
+  deliveryAddress      DeliveryAddress? @relation(fields: [deliveryAddressId], references: [id])
+  transporterId        String?
+  transporter          User?            @relation("AssignedTransporter", fields: [transporterId], references: [id])
+  vehicleId            String?
+  vehicle              Vehicle?         @relation(fields: [vehicleId], references: [id])
+  pickupLabel          String
+  pickupCity           String
+  pickupLat            Float?
+  pickupLng            Float?
+  deliveryLabel        String
+  deliveryCity         String
+  deliveryLat          Float?
+  deliveryLng          Float?
+  product              String
+  quantityKg           Float
+  requiredVehicleType  VehicleType
+  requiredCapacityKg   Float
+  preferredPickupDate  DateTime?
+  preferredPickupTime  String?
+  deliveryDeadline     DateTime?
+  distanceKm           Float
+  estimatedCost        Float
+  deliveryMethod       DeliveryMethod   @default(bit_app_transport)
+  status               TransportStatus  @default(requested)
+  driverName           String?
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+
+  tracking     DeliveryTracking[]
+  proof        DeliveryProof?
+  payment      TransportPayment?
+  disputes     DeliveryDispute[]
+
+  @@index([status, requiredVehicleType])
+  @@index([orderId])
+}
+
+model TransportPayment {
+  id                 String        @id @default(uuid())
+  transportRequestId String        @unique
+  transportRequest   TransportRequest @relation(fields: [transportRequestId], references: [id], onDelete: Cascade)
+  buyerId            String
+  buyer              User          @relation("BuyerTransportPayments", fields: [buyerId], references: [id])
+  transporterId      String
+  transporter        User          @relation("TransporterSettlements", fields: [transporterId], references: [id])
+  amount             Float
+  paymentMethod      String
+  paymentStatus      PaymentStatus @default(pending)
+  reference          String        @unique
+  paidAt             DateTime?
+  createdAt          DateTime      @default(now())
+}
+
+model DeliveryTracking {
+  id                 String          @id @default(uuid())
+  transportRequestId String
+  transportRequest   TransportRequest @relation(fields: [transportRequestId], references: [id], onDelete: Cascade)
+  status             TransportStatus
+  latitude           Float?
+  longitude          Float?
+  note               String?
+  actorId            String?
+  createdAt          DateTime        @default(now())
+
+  @@index([transportRequestId, createdAt])
+}
+
+model DeliveryProof {
+  id                 String   @id @default(uuid())
+  transportRequestId String   @unique
+  transportRequest   TransportRequest @relation(fields: [transportRequestId], references: [id], onDelete: Cascade)
+  orderedQuantityKg  Float
+  deliveredQuantityKg Float
+  receivedBy         String?
+  signature          String?
+  photoUrl           String?
+  otp                String?
+  notes              String?
+  createdAt          DateTime @default(now())
+}
+
+model DeliveryDispute {
+  id                 String        @id @default(uuid())
+  orderId            String
+  order              Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  transportRequestId String?
+  transportRequest   TransportRequest? @relation(fields: [transportRequestId], references: [id])
+  disputeType        DisputeType
+  quantityKg         Float
+  description        String
+  evidenceUrl        String?
+  status             DisputeStatus @default(open)
+  buyerRemarks       String?
+  adminRemarks       String?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+}
