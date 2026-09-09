@@ -127,6 +127,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           context.go(AppRoutes.transporterHome);
         case UserRole.government:
           context.go(AppRoutes.governmentHome);
+        case UserRole.admin:
+          context.go(AppRoutes.adminHome);
       }
     } else {
       context.go(AppRoutes.profileSetup);

@@ -37,14 +37,18 @@ export class AnalyticsService {
       grouped.set(key, entry);
     }
 
-    return Array.from(grouped.values()).map((entry) => ({
-      region: entry.region,
-      cropType: entry.cropType,
-      totalQuantity: entry.totalQuantity,
-      unit: entry.unit,
-      farmerCount: entry.farmers.size,
-      alertType: this.classifyAlert(entry.totalQuantity),
-    }));
+    return Array.from(grouped.values()).map((entry) => {
+      const suppressed = entry.farmers.size < 5;
+      return {
+        region: entry.region,
+        cropType: entry.cropType,
+        totalQuantity: suppressed ? null : entry.totalQuantity,
+        unit: entry.unit,
+        farmerCount: suppressed ? null : entry.farmers.size,
+        suppressed,
+        alertType: suppressed ? 'stable' : this.classifyAlert(entry.totalQuantity),
+      };
+    });
   }
 
   async getCropTrend(cropType: string) {
@@ -71,25 +75,27 @@ export class AnalyticsService {
   async getAlerts() {
     const regional = await this.getRegionalAnalytics();
     return {
-      alerts: regional.filter((r) => r.alertType !== 'stable'),
-      stable: regional.filter((r) => r.alertType === 'stable'),
+      alerts: regional.filter((r) => !r.suppressed && r.alertType !== 'stable'),
+      stable: regional.filter((r) => !r.suppressed && r.alertType === 'stable'),
     };
   }
 
   async getDashboardSummary() {
-    const [productionCount, demandCount, interestCount, userCount] =
-      await Promise.all([
-        this.prisma.production.count(),
-        this.prisma.demandRequest.count({ where: { status: 'open' } }),
-        this.prisma.purchaseInterest.count({ where: { status: 'pending' } }),
-        this.prisma.user.count(),
-      ]);
+    const [productionCount, openAuctionCount] = await Promise.all([
+      this.prisma.production.count({
+        where: {
+          status: {
+            in: [ProductionStatus.available, ProductionStatus.readyForHarvest],
+          },
+        },
+      }),
+      this.prisma.auction.count({ where: { status: 'open' } }),
+    ]);
 
     return {
-      totalProductions: productionCount,
-      openDemands: demandCount,
-      pendingInterests: interestCount,
-      registeredUsers: userCount,
+      publishedListingCount: productionCount,
+      openAuctionCount,
+      note: 'Counts only. Individual farmer or transaction records are not included.',
     };
   }
 

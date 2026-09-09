@@ -37,6 +37,11 @@ export class OrdersController {
     return this.orders.confirm(req.user, id);
   }
 
+  @Post(':id/decline')
+  decline(@Request() req: AuthRequest, @Param('id') id: string) {
+    return this.orders.decline(req.user, id);
+  }
+
   @Post(':id/pay')
   pay(
     @Request() req: AuthRequest,

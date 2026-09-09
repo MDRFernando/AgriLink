@@ -269,7 +269,7 @@ class LogisticsNotifier extends StateNotifier<LogisticsState> {
     );
     state = state.copyWith(jobs: [job, ...state.jobs]);
     notify(order.buyerId, 'Transport request created', '${job.code} is matching lorries.');
-    notify(order.farmerId, 'Delivery arranged', 'Buyer requested Bit App transport.');
+    notify(order.farmerId, 'Delivery arranged', 'Buyer requested AgriLink transport.');
     for (final t in state.transporters.where((t) => t.capacityKg >= order.quantityKg)) {
       notify(t.id, 'New transport request', '${job.code}: ${order.product} ${order.quantityKg} kg, ${order.pickupCity} → ${address.city}');
     }
@@ -527,6 +527,7 @@ final myNotificationsProvider = Provider<List<AppNotificationItem>>((ref) {
     UserRole.farmer => id ?? '',
     UserRole.transporter => 'transporter-demo',
     UserRole.government => 'gov-demo',
+    UserRole.admin => 'admin-demo',
     _ => 'business-demo',
   };
   final userId = id ?? fallback;

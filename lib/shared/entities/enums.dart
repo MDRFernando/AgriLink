@@ -1,4 +1,4 @@
-enum UserRole { farmer, business, government, transporter }
+enum UserRole { farmer, business, government, transporter, admin }
 
 extension UserRoleX on UserRole {
   String get label {
@@ -6,24 +6,75 @@ extension UserRoleX on UserRole {
       case UserRole.farmer:
         return 'Farmer';
       case UserRole.business:
-        return 'Business Buyer';
+        return 'Buyer';
       case UserRole.government:
-        return 'Admin';
+        return 'Government Authority';
       case UserRole.transporter:
-        return 'Transporter';
+        return 'Transport Partner';
+      case UserRole.admin:
+        return 'Platform Administrator';
     }
   }
 
   String get description {
     switch (this) {
       case UserRole.farmer:
-        return 'List your crops and connect with buyers directly';
+        return 'List produce and register cultivation plans for the season';
       case UserRole.business:
-        return 'Discover supply, bid, and arrange farm-to-business delivery';
+        return 'View supply, place competitive bids, and arrange delivery';
       case UserRole.government:
-        return 'Monitor production, transport, and delivery disputes';
+        return 'View aggregated crop plans, regional supply, and anonymized reports';
       case UserRole.transporter:
-        return 'Accept farm pickup jobs and deliver to businesses';
+        return 'Accept farm pickup jobs and deliver to buyers';
+      case UserRole.admin:
+        return 'Moderate listings and resolve disputes';
+    }
+  }
+}
+
+enum QualityGrade { a, b, c }
+
+extension QualityGradeX on QualityGrade {
+  String get label {
+    switch (this) {
+      case QualityGrade.a:
+        return 'Grade A';
+      case QualityGrade.b:
+        return 'Grade B';
+      case QualityGrade.c:
+        return 'Grade C';
+    }
+  }
+}
+
+/// Time-bounded ascending auction states from the Bit App research (Ch. 5.2).
+enum ListingAuctionStatus {
+  open,
+  expiredPendingClose,
+  awaitingFarmerConfirmation,
+  expiredNoSale,
+  sold,
+  cancelled,
+  hidden,
+}
+
+extension ListingAuctionStatusX on ListingAuctionStatus {
+  String get label {
+    switch (this) {
+      case ListingAuctionStatus.open:
+        return 'Bidding open';
+      case ListingAuctionStatus.expiredPendingClose:
+        return 'Window closed — pending close';
+      case ListingAuctionStatus.awaitingFarmerConfirmation:
+        return 'Awaiting your confirmation';
+      case ListingAuctionStatus.expiredNoSale:
+        return 'Expired — no sale';
+      case ListingAuctionStatus.sold:
+        return 'Sold';
+      case ListingAuctionStatus.cancelled:
+        return 'Cancelled';
+      case ListingAuctionStatus.hidden:
+        return 'Hidden by moderator';
     }
   }
 }
@@ -82,6 +133,53 @@ extension DemandStatusX on DemandStatus {
         return 'Fulfilled';
       case DemandStatus.closed:
         return 'Closed';
+    }
+  }
+}
+
+enum CropPlanStatus { planned, cultivating, harvested, cancelled }
+
+extension CropPlanStatusX on CropPlanStatus {
+  String get label {
+    switch (this) {
+      case CropPlanStatus.planned:
+        return 'Planned';
+      case CropPlanStatus.cultivating:
+        return 'Cultivating';
+      case CropPlanStatus.harvested:
+        return 'Harvested';
+      case CropPlanStatus.cancelled:
+        return 'Cancelled';
+    }
+  }
+}
+
+enum CultivationSeason { maha, yala, offSeason }
+
+extension CultivationSeasonX on CultivationSeason {
+  String get label {
+    switch (this) {
+      case CultivationSeason.maha:
+        return 'Maha';
+      case CultivationSeason.yala:
+        return 'Yala';
+      case CultivationSeason.offSeason:
+        return 'Off-season';
+    }
+  }
+}
+
+enum CropBalanceSignal { surplusRisk, demandGap, balanced }
+
+extension CropBalanceSignalX on CropBalanceSignal {
+  String get label {
+    switch (this) {
+      case CropBalanceSignal.surplusRisk:
+        return 'Surplus risk';
+      case CropBalanceSignal.demandGap:
+        return 'Demand gap';
+      case CropBalanceSignal.balanced:
+        return 'Balanced';
     }
   }
 }

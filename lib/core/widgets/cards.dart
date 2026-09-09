@@ -59,7 +59,9 @@ class ProductionCard extends StatelessWidget {
                     ),
                   ),
                   StatusChip(
-                    label: production.status.label,
+                    label: production.auctionStatus == ListingAuctionStatus.open
+                        ? production.status.label
+                        : production.auctionStatus.label,
                     color: _statusColor(production.status),
                   ),
                 ],
@@ -75,6 +77,22 @@ class ProductionCard extends StatelessWidget {
                   _InfoItem(
                     icon: Icons.calendar_today,
                     label: DateFormat('MMM d, yyyy').format(production.harvestDate),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  _InfoItem(
+                    icon: Icons.verified_outlined,
+                    label: production.qualityGrade.label,
+                  ),
+                  const SizedBox(width: 16),
+                  _InfoItem(
+                    icon: Icons.gavel,
+                    label: production.currentHighestBid > 0
+                        ? 'LKR ${production.currentHighestBid.toStringAsFixed(0)}/kg'
+                        : 'Reserve LKR ${production.reservePrice.toStringAsFixed(0)}/kg',
                   ),
                 ],
               ),

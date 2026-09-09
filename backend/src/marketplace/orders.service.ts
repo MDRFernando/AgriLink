@@ -8,6 +8,7 @@ import {
   NotificationAudience,
   OrderStatus,
   PaymentStatus,
+  ProductionStatus,
   UserRole,
 } from '@prisma/client';
 import {
@@ -39,7 +40,7 @@ export class OrdersService {
         ? { farmerId: user.id }
         : user.role === UserRole.business
           ? { buyerId: user.id }
-          : {};
+          : { id: '__none__' };
     return this.prisma.order.findMany({
       where,
       include: {
@@ -61,11 +62,10 @@ export class OrdersService {
       },
     });
     if (!order) throw new NotFoundException('Order not found');
-    if (
-      user.role !== UserRole.government &&
-      order.farmerId !== user.id &&
-      order.buyerId !== user.id
-    ) {
+    if (user.role === UserRole.government) {
+      throw new ForbiddenException();
+    }
+    if (order.farmerId !== user.id && order.buyerId !== user.id) {
       throw new ForbiddenException();
     }
     return this.withIncome(order);
@@ -90,6 +90,10 @@ export class OrdersService {
           },
         },
       });
+      await this.prisma.production.update({
+        where: { id: order.productionId },
+        data: { status: ProductionStatus.sold },
+      });
       await this.notifications.notify(
         order.buyerId,
         NotificationAudience.buyer,
@@ -97,7 +101,6 @@ export class OrdersService {
         'Please confirm the order to proceed to payment.',
       );
       return updated;
-    }
 
     if (user.id === order.buyerId && order.farmerConfirmed && !order.buyerConfirmed) {
       const updated = await this.prisma.order.update({
@@ -124,6 +127,40 @@ export class OrdersService {
     }
 
     throw new BadRequestException('Confirmation not applicable in current state');
+  }
+
+  async decline(user: SafeUser, id: string) {
+    const order = await this.prisma.order.findUnique({ where: { id } });
+    if (!order) throw new NotFoundException('Order not found');
+    if (user.id !== order.farmerId) throw new ForbiddenException();
+    if (order.farmerConfirmed) {
+      throw new BadRequestException('Order already confirmed');
+    }
+
+    const updated = await this.prisma.order.update({
+      where: { id },
+      data: {
+        status: OrderStatus.cancelled,
+        events: {
+          create: {
+            status: OrderStatus.cancelled,
+            actorId: user.id,
+            action: 'FARMER_DECLINE',
+          },
+        },
+      },
+    });
+    await this.prisma.production.update({
+      where: { id: order.productionId },
+      data: { status: ProductionStatus.available },
+    });
+    await this.notifications.notify(
+      order.buyerId,
+      NotificationAudience.buyer,
+      'Bid declined',
+      'The farmer declined the winning bid.',
+    );
+    return updated;
   }
 
   async sandboxPay(user: SafeUser, id: string, succeed = true, method = 'card') {
@@ -229,11 +266,10 @@ export class OrdersService {
       include: { transportation: true },
     });
     if (!order) throw new NotFoundException('Order not found');
-    if (
-      user.role !== UserRole.government &&
-      order.farmerId !== user.id &&
-      order.buyerId !== user.id
-    ) {
+    if (user.role === UserRole.government) {
+      throw new ForbiddenException();
+    }
+    if (order.farmerId !== user.id && order.buyerId !== user.id) {
       throw new ForbiddenException();
     }
 

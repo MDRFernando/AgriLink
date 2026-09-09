@@ -47,7 +47,7 @@ class RouterNotifier extends ChangeNotifier {
       if (path.startsWith('/government') && role != UserRole.government) {
         return _homeForRole(role);
       }
-      if (path.startsWith('/transporter') && role != UserRole.transporter) {
+      if (path.startsWith('/admin') && role != UserRole.admin) {
         return _homeForRole(role);
       }
     }
@@ -72,6 +72,8 @@ String _homeForRole(UserRole? role) {
       return AppRoutes.governmentHome;
     case UserRole.transporter:
       return AppRoutes.transporterHome;
+    case UserRole.admin:
+      return AppRoutes.adminHome;
     case UserRole.farmer:
     default:
       return AppRoutes.farmerHome;

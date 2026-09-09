@@ -20,11 +20,14 @@ class _AddProductionScreenState extends ConsumerState<AddProductionScreen> {
   final _quantityController = TextEditingController();
   final _locationController = TextEditingController();
   final _notesController = TextEditingController();
+  final _reserveController = TextEditingController(text: '100');
+  final _incrementController = TextEditingController(text: '5');
 
   String? _cropType;
   String? _region;
   String? _unit = 'kg';
-  ProductionStatus _status = ProductionStatus.planned;
+  QualityGrade _grade = QualityGrade.b;
+  int _windowHours = 48;
   DateTime _harvestDate = DateTime.now().add(const Duration(days: 30));
 
   @override
@@ -32,13 +35,15 @@ class _AddProductionScreenState extends ConsumerState<AddProductionScreen> {
     _quantityController.dispose();
     _locationController.dispose();
     _notesController.dispose();
+    _reserveController.dispose();
+    _incrementController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Add Production')),
+      appBar: AppBar(title: const Text('List produce')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Form(
@@ -54,7 +59,7 @@ class _AddProductionScreenState extends ConsumerState<AddProductionScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Share your crop information to connect with buyers directly.',
+                'List produce for open bidding. Buyers will compete above your reserve price until the window closes.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: AppColors.textSecondary,
                     ),
@@ -111,13 +116,50 @@ class _AddProductionScreenState extends ConsumerState<AddProductionScreen> {
                 validator: (v) => v == null || v.isEmpty ? 'Location is required' : null,
               ),
               const SizedBox(height: 16),
-              AppDropdownField<ProductionStatus>(
-                label: 'Production Status',
-                value: _status,
-                prefixIcon: Icons.timeline,
-                items: ProductionStatus.values,
-                itemLabel: (s) => s.label,
-                onChanged: (v) => setState(() => _status = v ?? ProductionStatus.planned),
+              AppDropdownField<QualityGrade>(
+                label: 'Quality grade',
+                value: _grade,
+                prefixIcon: Icons.verified_outlined,
+                items: QualityGrade.values,
+                itemLabel: (g) => g.label,
+                onChanged: (v) => setState(() => _grade = v ?? QualityGrade.b),
+              ),
+              const SizedBox(height: 16),
+              AppTextField(
+                label: 'Reserve price (LKR / kg)',
+                controller: _reserveController,
+                keyboardType: TextInputType.number,
+                prefixIcon: Icons.sell_outlined,
+                validator: (v) {
+                  if (v == null || v.isEmpty) return 'Required';
+                  if (double.tryParse(v) == null || double.parse(v) <= 0) {
+                    return 'Enter a reserve price';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              AppTextField(
+                label: 'Minimum bid increment (LKR / kg)',
+                controller: _incrementController,
+                keyboardType: TextInputType.number,
+                prefixIcon: Icons.trending_up,
+                validator: (v) {
+                  if (v == null || v.isEmpty) return 'Required';
+                  if (double.tryParse(v) == null || double.parse(v) <= 0) {
+                    return 'Enter an increment';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              AppDropdownField<int>(
+                label: 'Bidding window',
+                value: _windowHours,
+                prefixIcon: Icons.timer_outlined,
+                items: const [12, 24, 48, 72],
+                itemLabel: (h) => '$h hours',
+                onChanged: (v) => setState(() => _windowHours = v ?? 48),
               ),
               const SizedBox(height: 16),
               ListTile(
@@ -136,7 +178,7 @@ class _AddProductionScreenState extends ConsumerState<AddProductionScreen> {
                 maxLines: 3,
               ),
               const SizedBox(height: 32),
-              AppButton(label: 'Save Production', onPressed: _save),
+              AppButton(label: 'Publish listing', onPressed: _save),
             ],
           ),
         ),
@@ -165,6 +207,12 @@ class _AddProductionScreenState extends ConsumerState<AddProductionScreen> {
 
     final profile = ref.read(authProvider).profile;
     if (profile == null) return;
+    if (!profile.isVerified) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Complete identity verification before listing produce.')),
+      );
+      return;
+    }
     final production = Production(
       id: 'prod-${DateTime.now().millisecondsSinceEpoch}',
       farmerId: profile.id,
@@ -175,9 +223,14 @@ class _AddProductionScreenState extends ConsumerState<AddProductionScreen> {
       harvestDate: _harvestDate,
       region: _region!,
       location: _locationController.text.trim(),
-      status: _status,
+      status: ProductionStatus.available,
       notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
       createdAt: DateTime.now(),
+      qualityGrade: _grade,
+      reservePrice: double.parse(_reserveController.text),
+      minIncrement: double.parse(_incrementController.text),
+      biddingWindowEnd: DateTime.now().add(Duration(hours: _windowHours)),
+      auctionStatus: ListingAuctionStatus.open,
     );
 
     ref.read(appDataProvider.notifier).addProduction(production);

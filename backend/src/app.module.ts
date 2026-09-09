@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { AuthModule } from './auth/auth.module';
+import { CropPlansModule } from './crop-plans/crop-plans.module';
 import { DemandsModule } from './demands/demands.module';
 import { InterestsModule } from './interests/interests.module';
 import { LogisticsModule } from './logistics/logistics.module';
@@ -18,6 +19,7 @@ import { ReferenceModule } from './reference/reference.module';
     NotificationsModule,
     AuthModule,
     ProductionsModule,
+    CropPlansModule,
     DemandsModule,
     InterestsModule,
     AnalyticsModule,

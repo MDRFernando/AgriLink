@@ -137,6 +137,19 @@ enum DisputeStatus {
   rejected
 }
 
+enum CropPlanStatus {
+  planned
+  cultivating
+  harvested
+  cancelled
+}
+
+enum CultivationSeason {
+  maha
+  yala
+  off_season
+}
+
 model User {
   id               String   @id @default(uuid())
   email            String   @unique
@@ -176,6 +189,7 @@ model User {
   assignedJobs         TransportRequest[]  @relation("AssignedTransporter")
   transportPayments    TransportPayment[]  @relation("BuyerTransportPayments")
   transporterSettlements TransportPayment[] @relation("TransporterSettlements")
+  cropPlans            CropPlan[]
 }
 
 model FarmerProfile {
@@ -635,4 +649,27 @@ model DeliveryDispute {
   adminRemarks       String?
   createdAt          DateTime      @default(now())
   updatedAt          DateTime      @updatedAt
+}
+
+model CropPlan {
+  id                 String              @id @default(uuid())
+  farmerId           String
+  farmer             User                @relation(fields: [farmerId], references: [id], onDelete: Cascade)
+  cropType           String
+  cultivationYear    Int
+  cultivationMonth   Int
+  season             CultivationSeason?
+  areaAcres          Float
+  province           String
+  district           String
+  dsDivision         String
+  village            String
+  locationNotes      String?
+  expectedYieldKg    Float?
+  status             CropPlanStatus      @default(planned)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+
+  @@index([district, cropType, cultivationYear, cultivationMonth])
+  @@index([farmerId])
 }

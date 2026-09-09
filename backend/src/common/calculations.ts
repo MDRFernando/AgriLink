@@ -106,16 +106,13 @@ export function isBidValid(params: {
   highestBid: number;
   increment: number;
   openingBid: number;
+  reservePrice?: number;
 }): boolean {
-  const floor = Math.max(
-    params.openingBid,
-    minValidBid(params.highestBid, params.increment),
-  );
-  // First bid may equal opening bid when no bids yet (highestBid === 0).
-  if (params.highestBid <= 0) {
-    return params.amount >= params.openingBid;
-  }
-  return params.amount >= floor;
+  const reserve = params.reservePrice ?? params.openingBid;
+  const minimumAcceptable = params.highestBid + params.increment;
+  if (params.amount < minimumAcceptable) return false;
+  if (params.amount < reserve) return false;
+  return true;
 }
 
 function nz(n: number): number {

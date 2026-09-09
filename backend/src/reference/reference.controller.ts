@@ -4,6 +4,7 @@ import {
   QUANTITY_UNITS,
   REGIONS,
 } from '../common/constants';
+import { GEO_DISTRICTS } from '../common/geo';
 
 @Controller('reference')
 export class ReferenceController {
@@ -20,5 +21,10 @@ export class ReferenceController {
   @Get('units')
   getUnits() {
     return QUANTITY_UNITS;
+  }
+
+  @Get('geo')
+  getGeo() {
+    return GEO_DISTRICTS;
   }
 }

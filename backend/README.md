@@ -75,12 +75,25 @@ Base URL: `http://localhost:3000/api/v1`
 | GET    | /analytics/trends/:crop   | Crop production trends   |
 | GET    | /analytics/alerts         | Shortage/surplus alerts  |
 
+### Crop planning
+| Method | Path | Auth | Role |
+|--------|------|------|------|
+| GET | /crop-plans/mine | Yes | farmer |
+| POST | /crop-plans | Yes | farmer |
+| PATCH | /crop-plans/:id | Yes | farmer |
+| GET | /crop-plans/dashboard | Yes | government |
+| GET | /crop-plans/aggregates | Yes | government |
+| GET | /crop-plans/insights | Yes | government |
+
+Query filters on government routes: `cropType`, `district`, `dsDivision`, `village`, `month`, `year`, `groupBy` (`crop` \| `district` \| `dsDivision` \| `village` \| `period`).
+
 ### Reference
 | Method | Path               | Description     |
 |--------|--------------------|-----------------|
 | GET    | /reference/crops   | Crop types      |
 | GET    | /reference/regions | Sri Lanka regions |
 | GET    | /reference/units   | Quantity units  |
+| GET    | /reference/geo     | District / DS Division / village tree |
 
 ## Authentication
 

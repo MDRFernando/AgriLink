@@ -1,15 +1,16 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:my_app/core/theme/app_colors.dart';
-import 'package:my_app/shared/data/mock_data.dart';
 import 'package:my_app/shared/entities/models.dart';
+import 'package:my_app/shared/providers/app_providers.dart';
 
-class GovernmentAnalyticsScreen extends StatelessWidget {
+class GovernmentAnalyticsScreen extends ConsumerWidget {
   const GovernmentAnalyticsScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final analytics = MockData.regionalAnalytics;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final analytics = ref.watch(publishedRegionalAnalyticsProvider);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -24,7 +25,7 @@ class GovernmentAnalyticsScreen extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Production capacity and farmer participation by region',
+            'Production capacity (anonymized; k≥5 farmers per cell)',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: AppColors.textSecondary,
                 ),

@@ -10,6 +10,7 @@ import 'package:my_app/features/business/screens/business_demand_screen.dart';
 import 'package:my_app/features/business/screens/business_interests_screen.dart';
 import 'package:my_app/features/business/screens/marketplace_screen.dart';
 import 'package:my_app/features/logistics/screens/buyer_delivery_screens.dart';
+import 'package:my_app/features/marketplace/widgets/market_visibility_panel.dart';
 import 'package:my_app/shared/entities/enums.dart';
 import 'package:my_app/shared/providers/app_providers.dart';
 import 'package:my_app/shared/providers/logistics_provider.dart';
@@ -27,7 +28,7 @@ class _BusinessShellState extends ConsumerState<BusinessShell> {
   @override
   Widget build(BuildContext context) {
     return RoleScaffold(
-      title: 'Business Dashboard',
+      title: 'Buyer Dashboard',
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
         onDestinationSelected: (i) => setState(() => _index = i),
@@ -60,7 +61,11 @@ class _BusinessOverviewTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final profile = ref.watch(authProvider).profile;
     final available = ref.watch(availableProductionsProvider);
-    final interests = ref.watch(businessInterestsProvider);
+    final myBids = ref
+        .watch(appDataProvider)
+        .bids
+        .where((b) => b.buyerId == profile?.id)
+        .toList();
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -75,7 +80,7 @@ class _BusinessOverviewTab extends ConsumerWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            'Discover agricultural supply and arrange farm-to-business delivery',
+            'View listings, place bids, and arrange farm-to-business delivery',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: AppColors.textSecondary,
                 ),
@@ -87,7 +92,7 @@ class _BusinessOverviewTab extends ConsumerWidget {
               child: ListTile(
                 leading: Icon(Icons.local_shipping, color: AppColors.transporter),
                 title: Text('Your products are ready to be delivered.'),
-                subtitle: Text('Open the Orders tab to choose Bit App Transport.'),
+                subtitle: Text('Open the Orders tab to choose AgriLink Transport.'),
               ),
             ),
           ],
@@ -101,31 +106,33 @@ class _BusinessOverviewTab extends ConsumerWidget {
             childAspectRatio: 1.4,
             children: [
               StatCard(
-                label: 'Available Supply',
+                label: 'Open listings',
                 value: '${available.length}',
                 icon: Icons.inventory_2,
                 color: AppColors.business,
               ),
               StatCard(
-                label: 'My Interests',
-                value: '${interests.length}',
-                icon: Icons.handshake,
+                label: 'My bids',
+                value: '${myBids.length}',
+                icon: Icons.gavel,
                 color: AppColors.accent,
               ),
               StatCard(
-                label: 'Pending',
-                value: '${interests.where((i) => i.status == InterestStatus.pending).length}',
-                icon: Icons.hourglass_top,
-                color: AppColors.warning,
+                label: 'Orders',
+                value: '${ref.watch(buyerOrdersProvider).length}',
+                icon: Icons.local_shipping,
+                color: AppColors.success,
               ),
               StatCard(
-                label: 'Accepted',
-                value: '${interests.where((i) => i.status == InterestStatus.accepted).length}',
-                icon: Icons.check_circle,
-                color: AppColors.success,
+                label: 'Verified',
+                value: profile?.isVerified == true ? 'Yes' : 'No',
+                icon: Icons.verified_user,
+                color: AppColors.warning,
               ),
             ],
           ),
+          const SizedBox(height: 24),
+          const MarketVisibilityPanel(title: 'Shared supply visibility'),
           const SizedBox(height: 24),
           SectionHeader(
             title: 'Featured Supply',

@@ -7,9 +7,12 @@ import 'package:my_app/core/widgets/cards.dart';
 import 'package:my_app/core/widgets/common_widgets.dart';
 import 'package:my_app/core/widgets/role_scaffold.dart';
 import 'package:my_app/shared/entities/enums.dart';
+import 'package:my_app/shared/entities/models.dart';
 import 'package:my_app/features/farmer/screens/farmer_demand_screen.dart';
 import 'package:my_app/features/logistics/screens/farmer_logistics_screens.dart';
+import 'package:my_app/features/marketplace/widgets/market_visibility_panel.dart';
 import 'package:my_app/shared/providers/app_providers.dart';
+import 'package:my_app/shared/providers/logistics_provider.dart';
 
 class FarmerShell extends ConsumerStatefulWidget {
   const FarmerShell({super.key});
@@ -29,7 +32,7 @@ class _FarmerShellState extends ConsumerState<FarmerShell> {
           ? FloatingActionButton.extended(
               onPressed: () => context.push(AppRoutes.farmerAddProduction),
               icon: const Icon(Icons.add),
-              label: const Text('Add Production'),
+              label: const Text('List produce'),
             )
           : null,
       bottomNavigationBar: NavigationBar(
@@ -37,9 +40,9 @@ class _FarmerShellState extends ConsumerState<FarmerShell> {
         onDestinationSelected: (i) => setState(() => _index = i),
         destinations: const [
           NavigationDestination(icon: Icon(Icons.dashboard_outlined), selectedIcon: Icon(Icons.dashboard), label: 'Home'),
-          NavigationDestination(icon: Icon(Icons.grass_outlined), selectedIcon: Icon(Icons.grass), label: 'Productions'),
+          NavigationDestination(icon: Icon(Icons.grass_outlined), selectedIcon: Icon(Icons.grass), label: 'Listings'),
           NavigationDestination(icon: Icon(Icons.local_shipping_outlined), selectedIcon: Icon(Icons.local_shipping), label: 'Orders'),
-          NavigationDestination(icon: Icon(Icons.handshake_outlined), selectedIcon: Icon(Icons.handshake), label: 'Interests'),
+          NavigationDestination(icon: Icon(Icons.gavel_outlined), selectedIcon: Icon(Icons.gavel), label: 'Bids'),
           NavigationDestination(icon: Icon(Icons.campaign_outlined), selectedIcon: Icon(Icons.campaign), label: 'Demand'),
         ],
       ),
@@ -49,7 +52,7 @@ class _FarmerShellState extends ConsumerState<FarmerShell> {
           _FarmerOverviewTab(),
           _FarmerProductionsTab(),
           FarmerOrdersTab(),
-          _FarmerInterestsTab(),
+          _FarmerBidsTab(),
           FarmerDemandScreen(),
         ],
       ),
@@ -64,9 +67,8 @@ class _FarmerOverviewTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final profile = ref.watch(authProvider).profile;
     final productions = ref.watch(farmerProductionsProvider);
-    final interests = ref.watch(farmerInterestsProvider);
-    final pendingInterests =
-        interests.where((i) => i.status == InterestStatus.pending).length;
+    final pendingBids =
+        ref.watch(farmerPendingConfirmationsProvider).length;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -102,9 +104,9 @@ class _FarmerOverviewTab extends ConsumerWidget {
                 color: AppColors.farmer,
               ),
               StatCard(
-                label: 'Pending Interests',
-                value: '$pendingInterests',
-                icon: Icons.handshake,
+                label: 'Bids to confirm',
+                value: '$pendingBids',
+                icon: Icons.gavel,
                 color: AppColors.accent,
               ),
               StatCard(
@@ -122,13 +124,31 @@ class _FarmerOverviewTab extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 24),
-          const SectionHeader(title: 'Recent Productions'),
+          Card(
+            child: ListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              leading: const Icon(Icons.calendar_month, color: AppColors.farmer),
+              title: const Text(
+                'Crop planning',
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
+              subtitle: Text(
+                '${ref.watch(farmerCropPlansProvider).length} plan(s) registered. Tell government what you intend to cultivate.',
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.push(AppRoutes.farmerCropPlans),
+            ),
+          ),
+          const SizedBox(height: 24),
+          const MarketVisibilityPanel(title: 'Shared supply visibility'),
+          const SizedBox(height: 24),
+          const SectionHeader(title: 'Your listings'),
           const SizedBox(height: 12),
           if (productions.isEmpty)
             const EmptyStateView(
               icon: Icons.grass,
-              title: 'No productions yet',
-              message: 'Add your first crop listing to connect with buyers.',
+              title: 'No listings yet',
+              message: 'Publish a listing with crop, grade, reserve price, and bidding window.',
             )
           else
             ...productions.take(3).map(
@@ -156,9 +176,9 @@ class _FarmerProductionsTab extends ConsumerWidget {
     if (productions.isEmpty) {
       return EmptyStateView(
         icon: Icons.grass,
-        title: 'No productions yet',
-        message: 'Start by adding details about your crops and harvest schedule.',
-        actionLabel: 'Add Production',
+        title: 'No listings yet',
+        message: 'Start by listing produce with a reserve price and bidding window.',
+        actionLabel: 'List produce',
         onAction: () => context.push(AppRoutes.farmerAddProduction),
       );
     }
@@ -178,50 +198,141 @@ class _FarmerProductionsTab extends ConsumerWidget {
   }
 }
 
-class _FarmerInterestsTab extends ConsumerWidget {
-  const _FarmerInterestsTab();
+class _FarmerBidsTab extends ConsumerWidget {
+  const _FarmerBidsTab();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final interests = ref.watch(farmerInterestsProvider);
+    final pending = ref.watch(farmerPendingConfirmationsProvider);
+    final myIds = ref.watch(farmerProductionsProvider).map((p) => p.id).toSet();
+    final bids = ref
+        .watch(appDataProvider)
+        .bids
+        .where((b) => myIds.contains(b.listingId))
+        .toList();
 
-    if (interests.isEmpty) {
+    if (pending.isEmpty && bids.isEmpty) {
       return const EmptyStateView(
-        icon: Icons.handshake,
-        title: 'No purchase interests yet',
-        message: 'When businesses express interest in your crops, they will appear here.',
+        icon: Icons.gavel,
+        title: 'No bids yet',
+        message: 'When buyers bid on your listings, they appear here. After the window closes you can confirm or decline the highest qualifying bid.',
       );
     }
 
-    return ListView.separated(
+    return ListView(
       padding: const EdgeInsets.all(16),
-      itemCount: interests.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
-      itemBuilder: (context, index) {
-        final interest = interests[index];
-        return InterestCard(
-          interest: interest,
-          showActions: true,
-          onAccept: () {
-            ref.read(appDataProvider.notifier).updateInterestStatus(
-                  interest.id,
-                  InterestStatus.accepted,
-                );
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Interest accepted')),
+      children: [
+        if (pending.isNotEmpty) ...[
+          Text(
+            'Confirm or decline winning bids',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+          const SizedBox(height: 12),
+          ...pending.map((listing) {
+            final winner = bids
+                .where((b) => b.listingId == listing.id)
+                .fold<MarketBid?>(null, (best, b) {
+              if (best == null || b.amount > best.amount) return b;
+              return best;
+            });
+            return Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      listing.cropType,
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    Text(
+                      winner == null
+                          ? 'Highest bid LKR ${listing.currentHighestBid.toStringAsFixed(0)}/kg'
+                          : '${winner.buyerName} · LKR ${winner.amount.toStringAsFixed(0)}/kg',
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: AppButton(
+                            label: 'Confirm',
+                            onPressed: () {
+                              final profile = ref.read(authProvider).profile;
+                              if (profile == null) return;
+                              ref.read(appDataProvider.notifier).closeExpiredAuctions();
+                              ref
+                                  .read(appDataProvider.notifier)
+                                  .confirmWinningBid(listing.id);
+                              final buyerId = listing.currentHighestBidderId;
+                              final buyerName = winner?.buyerName ?? 'Buyer';
+                              final buyer = UserProfile(
+                                id: buyerId ?? 'buyer',
+                                name: buyerName,
+                                email: '',
+                                phone: '',
+                                role: UserRole.business,
+                                organizationName: buyerName,
+                                isVerified: true,
+                              );
+                              ref.read(logisticsProvider.notifier).createBuyOrder(
+                                    production: listing.copyWith(
+                                      status: ProductionStatus.sold,
+                                    ),
+                                    buyer: buyer,
+                                    quantityKg: listing.quantity,
+                                    unitPrice: listing.currentHighestBid,
+                                  );
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Bid accepted. A logistics record will be created after produce payment.',
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: AppButton(
+                            label: 'Decline',
+                            isOutlined: true,
+                            onPressed: () {
+                              ref
+                                  .read(appDataProvider.notifier)
+                                  .declineWinningBid(listing.id);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Winning bid declined')),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
             );
-          },
-          onReject: () {
-            ref.read(appDataProvider.notifier).updateInterestStatus(
-                  interest.id,
-                  InterestStatus.rejected,
-                );
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Interest rejected')),
-            );
-          },
-        );
-      },
+          }),
+          const SizedBox(height: 24),
+        ],
+        Text(
+          'Bid activity',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+        ),
+        const SizedBox(height: 8),
+        ...bids.map(
+          (b) => ListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text(b.buyerName),
+            subtitle: Text('LKR ${b.amount.toStringAsFixed(0)}/kg'),
+          ),
+        ),
+      ],
     );
   }
 }

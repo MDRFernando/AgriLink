@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:my_app/core/theme/app_colors.dart';
 import 'package:my_app/core/widgets/cards.dart';
 import 'package:my_app/core/widgets/common_widgets.dart';
-import 'package:my_app/shared/data/mock_data.dart';
 import 'package:my_app/shared/entities/enums.dart';
+import 'package:my_app/shared/providers/app_providers.dart';
 
-class GovernmentAlertsScreen extends StatelessWidget {
+class GovernmentAlertsScreen extends ConsumerWidget {
   const GovernmentAlertsScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final analytics = MockData.regionalAnalytics;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final analytics = ref.watch(publishedRegionalAnalyticsProvider);
     final alerts = analytics
         .where((a) => a.alertType != SupplyAlertType.stable)
         .toList();

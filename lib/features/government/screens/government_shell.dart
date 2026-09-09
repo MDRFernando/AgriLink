@@ -9,11 +9,12 @@ import 'package:my_app/core/widgets/common_widgets.dart';
 import 'package:my_app/core/widgets/role_scaffold.dart';
 import 'package:my_app/features/government/screens/government_alerts_screen.dart';
 import 'package:my_app/features/government/screens/government_analytics_screen.dart';
+import 'package:my_app/features/government/screens/government_crop_planning_screen.dart';
 import 'package:my_app/features/government/screens/government_logistics_screen.dart';
-import 'package:my_app/features/government/screens/government_reports_screen.dart';
 import 'package:my_app/shared/data/mock_data.dart';
 import 'package:my_app/shared/entities/enums.dart';
 import 'package:my_app/shared/entities/models.dart';
+import 'package:my_app/shared/logic/crop_planning_aggregation.dart';
 import 'package:my_app/shared/providers/app_providers.dart';
 
 class GovernmentShell extends ConsumerStatefulWidget {
@@ -35,20 +36,20 @@ class _GovernmentShellState extends ConsumerState<GovernmentShell> {
         onDestinationSelected: (i) => setState(() => _index = i),
         destinations: const [
           NavigationDestination(icon: Icon(Icons.dashboard_outlined), selectedIcon: Icon(Icons.dashboard), label: 'Overview'),
+          NavigationDestination(icon: Icon(Icons.agriculture_outlined), selectedIcon: Icon(Icons.agriculture), label: 'Crop plans'),
           NavigationDestination(icon: Icon(Icons.analytics_outlined), selectedIcon: Icon(Icons.analytics), label: 'Analytics'),
           NavigationDestination(icon: Icon(Icons.warning_amber_outlined), selectedIcon: Icon(Icons.warning_amber), label: 'Alerts'),
           NavigationDestination(icon: Icon(Icons.local_shipping_outlined), selectedIcon: Icon(Icons.local_shipping), label: 'Logistics'),
-          NavigationDestination(icon: Icon(Icons.description_outlined), selectedIcon: Icon(Icons.description), label: 'Reports'),
         ],
       ),
       body: IndexedStack(
         index: _index,
         children: const [
           _GovernmentOverviewTab(),
+          GovernmentCropPlanningScreen(),
           GovernmentAnalyticsScreen(),
           GovernmentAlertsScreen(),
           GovernmentLogisticsScreen(),
-          GovernmentReportsScreen(),
         ],
       ),
     );
@@ -61,8 +62,19 @@ class _GovernmentOverviewTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profile = ref.watch(authProvider).profile;
-    final productions = ref.watch(appDataProvider).productions;
-    final analytics = MockData.regionalAnalytics;
+    final analytics = ref.watch(publishedRegionalAnalyticsProvider);
+    final cropPlans = filterCropPlans(ref.watch(appDataProvider).cropPlans);
+    final plannedFarmers = cropPlans.map((p) => p.farmerId).toSet().length;
+    final plannedAcres =
+        cropPlans.fold<double>(0, (sum, p) => sum + p.areaAcres);
+    final bananaKurunegala = cropPlans
+        .where((p) => p.cropType == 'Banana' && p.district == 'Kurunegala')
+        .toList();
+    final bananaAcres =
+        bananaKurunegala.fold<double>(0, (sum, p) => sum + p.areaAcres);
+    final bananaFarmers =
+        bananaKurunegala.map((p) => p.farmerId).toSet().length;
+
     final shortages =
         analytics.where((a) => a.alertType == SupplyAlertType.shortage).length;
     final surpluses =
@@ -88,6 +100,13 @@ class _GovernmentOverviewTab extends ConsumerWidget {
                   color: AppColors.textSecondary,
                 ),
           ),
+          const SizedBox(height: 8),
+          Text(
+            'Aggregated and anonymized only. Individual farmer and transaction records are not available to this account.',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+          ),
           const SizedBox(height: 24),
           GridView.count(
             crossAxisCount: 2,
@@ -98,9 +117,9 @@ class _GovernmentOverviewTab extends ConsumerWidget {
             childAspectRatio: 1.4,
             children: [
               StatCard(
-                label: 'Total Listings',
-                value: '${productions.length}',
-                icon: Icons.grass,
+                label: 'Published regions',
+                value: '${analytics.length}',
+                icon: Icons.map,
                 color: AppColors.government,
               ),
               StatCard(
@@ -125,6 +144,26 @@ class _GovernmentOverviewTab extends ConsumerWidget {
           ),
           const SizedBox(height: 24),
           SectionHeader(
+            title: 'National crop planning',
+            actionLabel: 'Open dashboard',
+            onAction: () => context.push(AppRoutes.governmentCropPlanning),
+          ),
+          const SizedBox(height: 12),
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.agriculture, color: AppColors.government),
+              title: Text('$plannedFarmers farmers · ${plannedAcres.toStringAsFixed(1)} acres registered'),
+              subtitle: Text(
+                bananaKurunegala.isEmpty
+                    ? 'Filter crop plans by district and month in the Crop plans tab.'
+                    : '$bananaFarmers farmers in Kurunegala plan ${bananaAcres.toStringAsFixed(1)} acres of banana.',
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.push(AppRoutes.governmentCropPlanning),
+            ),
+          ),
+          const SizedBox(height: 24),
+          SectionHeader(
             title: 'Production Trend (Rice)',
             actionLabel: 'Details',
             onAction: () => context.push(AppRoutes.governmentAnalytics),
@@ -140,7 +179,11 @@ class _GovernmentOverviewTab extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 24),
-          const SectionHeader(title: 'Regional Overview'),
+          SectionHeader(
+            title: 'Regional Overview',
+            actionLabel: 'Reports',
+            onAction: () => context.push(AppRoutes.governmentReports),
+          ),
           const SizedBox(height: 12),
           ...analytics.map(
             (item) => Padding(

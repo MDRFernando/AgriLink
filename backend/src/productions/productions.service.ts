@@ -161,6 +161,9 @@ export class ProductionsService {
     if (farmer.role !== UserRole.farmer) {
       throw new ForbiddenException('Only farmers can create productions');
     }
+    if (!farmer.isVerified) {
+      throw new ForbiddenException('Complete identity verification before listing produce');
+    }
 
     const listingCode = await this.listingCodes.nextCode();
     const minPrice = dto.minAcceptablePrice ?? 0;

@@ -6,6 +6,7 @@ import 'package:my_app/core/constants/app_constants.dart';
 import 'package:my_app/core/router/app_router.dart';
 import 'package:my_app/core/theme/app_colors.dart';
 import 'package:my_app/core/theme/app_theme.dart';
+import 'package:my_app/shared/providers/auction_runtime.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -13,13 +14,14 @@ void main() {
   runApp(const ProviderScope(child: AgriLinkApp()));
 }
 
-/// Root widget for the AgriLink farmer / business / government app.
+/// Root widget for the AgriLink farmer / buyer / government marketplace.
 class AgriLinkApp extends ConsumerWidget {
   const AgriLinkApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.read(routerProvider);
+    ref.watch(auctionCloseJobProvider);
 
     return MaterialApp.router(
       title: AppConstants.appName,
@@ -35,7 +37,10 @@ class AgriLinkApp extends ConsumerWidget {
             ),
           );
         }
-        return child;
+        return DefaultTextStyle.merge(
+          style: AppTheme.textStyle.copyWith(color: AppColors.textPrimary),
+          child: child,
+        );
       },
     );
   }

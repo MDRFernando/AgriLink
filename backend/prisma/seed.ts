@@ -1,5 +1,8 @@
 import {
   AuctionStatus,
+  CropPlanStatus,
+  CultivationSeason,
+  DemandStatus,
   OrderStatus,
   PaymentStatus,
   PrismaClient,
@@ -13,6 +16,7 @@ import * as bcrypt from 'bcrypt';
 const prisma = new PrismaClient();
 
 async function main() {
+  await prisma.cropPlan.deleteMany();
   await prisma.deliveryDispute.deleteMany();
   await prisma.deliveryProof.deleteMany();
   await prisma.deliveryTracking.deleteMany();
@@ -192,6 +196,120 @@ async function main() {
       instructions: 'Unload at the rear goods bay. Call 10 minutes before arrival.',
       isDefault: true,
     },
+  });
+
+  const bananaPlanRows: Array<{
+    name: string;
+    village: string;
+    ds: string;
+    acres: number;
+  }> = [
+    { name: 'Amal Wickramasinghe', village: 'Wehera', ds: 'Kurunegala', acres: 1.8 },
+    { name: 'Priyani Jayasuriya', village: 'Kurunegala', ds: 'Kurunegala', acres: 3.2 },
+    { name: 'Harsha Gunasekara', village: 'Mawathagama', ds: 'Mawathagama', acres: 2.0 },
+    { name: 'Lakmali Senanayake', village: 'Wewagedara', ds: 'Mawathagama', acres: 1.5 },
+    { name: 'Tharindu Herath', village: 'Polgahawela', ds: 'Polgahawela', acres: 4.0 },
+    { name: 'Ishara Bandara', village: 'Pothuhera', ds: 'Polgahawela', acres: 2.4 },
+    { name: 'Chathura Wijesinghe', village: 'Alawwa', ds: 'Polgahawela', acres: 1.6 },
+  ];
+
+  for (const [index, row] of bananaPlanRows.entries()) {
+    const user = await prisma.user.create({
+      data: {
+        email: `banana${index + 1}@agrilink.lk`,
+        passwordHash,
+        name: row.name,
+        role: UserRole.farmer,
+        region: 'North Western Province',
+        district: 'Kurunegala',
+        isVerified: true,
+        farmerProfile: { create: { farmLocation: `${row.village}, Kurunegala` } },
+      },
+    });
+    await prisma.cropPlan.create({
+      data: {
+        farmerId: user.id,
+        cropType: 'Banana',
+        cultivationYear: 2026,
+        cultivationMonth: 10,
+        season: CultivationSeason.maha,
+        areaAcres: row.acres,
+        province: 'North Western Province',
+        district: 'Kurunegala',
+        dsDivision: row.ds,
+        village: row.village,
+        status: CropPlanStatus.planned,
+      },
+    });
+  }
+
+  await prisma.cropPlan.createMany({
+    data: [
+      {
+        farmerId: farmer1.id,
+        cropType: 'Banana',
+        cultivationYear: 2026,
+        cultivationMonth: 10,
+        season: CultivationSeason.maha,
+        areaAcres: 2.5,
+        province: 'North Western Province',
+        district: 'Kurunegala',
+        dsDivision: 'Kurunegala',
+        village: 'Malkaduwawa',
+        locationNotes: 'Lowland plot near Deduru Oya',
+        expectedYieldKg: 18000,
+        status: CropPlanStatus.planned,
+      },
+      {
+        farmerId: farmer1.id,
+        cropType: 'Rice',
+        cultivationYear: 2026,
+        cultivationMonth: 10,
+        season: CultivationSeason.maha,
+        areaAcres: 3,
+        province: 'North Western Province',
+        district: 'Kurunegala',
+        dsDivision: 'Mawathagama',
+        village: 'Pilessa',
+        status: CropPlanStatus.planned,
+      },
+      {
+        farmerId: farmer2.id,
+        cropType: 'Tea',
+        cultivationYear: 2026,
+        cultivationMonth: 9,
+        season: CultivationSeason.yala,
+        areaAcres: 1.2,
+        province: 'Central Province',
+        district: 'Kandy',
+        dsDivision: 'Udunuwara',
+        village: 'Gelioya',
+        status: CropPlanStatus.cultivating,
+      },
+    ],
+  });
+
+  await prisma.demandRequest.createMany({
+    data: [
+      {
+        requesterId: business.id,
+        cropType: 'Rice',
+        quantityNeeded: 10000,
+        unit: 'kg',
+        deadline: daysFromNow(30),
+        region: 'Western Province',
+        status: DemandStatus.open,
+      },
+      {
+        requesterId: business.id,
+        cropType: 'Banana',
+        quantityNeeded: 8000,
+        unit: 'kg',
+        deadline: daysFromNow(60),
+        region: 'Western Province',
+        status: DemandStatus.open,
+      },
+    ],
   });
 
   const banana = await prisma.production.create({

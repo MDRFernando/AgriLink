@@ -8,6 +8,9 @@ abstract final class AppRoutes {
   static const farmerHome = '/farmer';
   static const farmerAddProduction = '/farmer/add-production';
   static const farmerProductionDetail = '/farmer/production/:id';
+  static const farmerCropPlans = '/farmer/crop-plans';
+  static const farmerCropPlanNew = '/farmer/crop-plans/new';
+  static const farmerCropPlanDetail = '/farmer/crop-plans/:id';
   static const farmerDemand = '/farmer/demand';
   static const farmerOrderDetail = '/farmer/orders/:id';
 
@@ -32,7 +35,9 @@ abstract final class AppRoutes {
 
   static const governmentHome = '/government';
   static const governmentAnalytics = '/government/analytics';
+  static const governmentCropPlanning = '/government/crop-planning';
   static const governmentReports = '/government/reports';
   static const governmentAlerts = '/government/alerts';
   static const governmentLogistics = '/government/logistics';
+  static const adminHome = '/admin';
 }

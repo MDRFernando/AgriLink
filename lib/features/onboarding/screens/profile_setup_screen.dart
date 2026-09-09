@@ -128,6 +128,8 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
         context.go(AppRoutes.businessHome);
       case UserRole.government:
         context.go(AppRoutes.governmentHome);
+      case UserRole.admin:
+        context.go(AppRoutes.adminHome);
       case UserRole.transporter:
         context.go(AppRoutes.transporterHome);
       case UserRole.farmer:

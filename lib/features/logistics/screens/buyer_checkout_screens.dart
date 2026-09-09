@@ -48,7 +48,7 @@ class _BuyerPaymentScreenState extends ConsumerState<BuyerPaymentScreen> {
         children: [
           OrderSummaryCard(order: order),
           const SizedBox(height: 16),
-          const Text('Pay for produce only. Transport is billed separately if you use Bit App Transport.',
+          const Text('Pay for produce only. Transport is billed separately if you use AgriLink Transport.',
               style: TextStyle(color: AppColors.textSecondary)),
           const SizedBox(height: 16),
           for (final m in ['Cash', 'Card', 'Bank Transfer'])
@@ -93,7 +93,7 @@ class DeliveryMethodScreen extends ConsumerWidget {
           Card(
             child: ListTile(
               leading: const Icon(Icons.local_shipping, color: AppColors.transporter, size: 36),
-              title: const Text('Bit App Transport', style: TextStyle(fontWeight: FontWeight.w700)),
+              title: const Text('AgriLink Transport', style: TextStyle(fontWeight: FontWeight.w700)),
               subtitle: const Text('Find a transporter — we match a lorry to the farm.'),
               trailing: const Icon(Icons.chevron_right),
               onTap: () => context.go('/business/orders/$orderId/address'),

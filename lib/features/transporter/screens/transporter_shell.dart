@@ -55,7 +55,7 @@ class _AvailableJobsTab extends ConsumerWidget {
       return const EmptyStateView(
         icon: Icons.local_shipping,
         title: 'No open pickup jobs',
-        message: 'When a buyer requests Bit App Transport, matching jobs appear here.',
+        message: 'When a buyer requests AgriLink Transport, matching jobs appear here.',
       );
     }
     return ListView.separated(

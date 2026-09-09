@@ -16,7 +16,6 @@ import {
 import {
   estimatedTransportCost,
   haversineKm,
-  isBidValid,
   minValidBid,
 } from '../common/calculations';
 import { PrismaService } from '../prisma/prisma.service';
@@ -69,28 +68,25 @@ export class AuctionsService implements OnModuleInit {
       include: { bids: true, production: true },
     });
     if (!auction) throw new NotFoundException('Auction not found');
-    if (auction.status !== AuctionStatus.open || auction.endTime < new Date()) {
-      throw new BadRequestException('Auction is not open');
+    if (auction.status !== AuctionStatus.open) {
+      throw new BadRequestException('Listing is not open for bidding');
+    }
+    if (auction.endTime < new Date()) {
+      await this.closeAuction(auction.id);
+      throw new BadRequestException('Bidding window has closed');
     }
     if (auction.production.farmerId === user.id) {
       throw new ForbiddenException('Farmers cannot bid on their own listings');
     }
 
     const highest = auction.bids.reduce((m, b) => Math.max(m, b.amount), 0);
-    const valid = isBidValid({
-      amount,
-      highestBid: highest,
-      increment: auction.minIncrement,
-      openingBid: auction.openingBid,
-    });
-    if (!valid) {
-      const need =
-        highest > 0
-          ? minValidBid(highest, auction.minIncrement)
-          : auction.openingBid;
-      throw new BadRequestException(
-        `Bid must be at least Rs. ${need}/kg (highest + increment)`,
-      );
+    const reserve = auction.minBid;
+    const minimumAcceptable = highest + auction.minIncrement;
+    if (amount < minimumAcceptable) {
+      throw new BadRequestException(`Bid must be at least ${minimumAcceptable}`);
+    }
+    if (amount < reserve) {
+      throw new BadRequestException("Bid is below farmer's reserve price");
     }
 
     const bid = await this.prisma.bid.create({
@@ -110,7 +106,7 @@ export class AuctionsService implements OnModuleInit {
     await this.notifications.notify(
       auction.production.farmerId,
       NotificationAudience.farmer,
-      'New bid received',
+      'new_highest_bid',
       `Rs. ${amount}/kg on ${auction.production.listingCode ?? auction.production.cropType}`,
     );
 
@@ -147,28 +143,31 @@ export class AuctionsService implements OnModuleInit {
     if (!auction || auction.status !== AuctionStatus.open) return null;
 
     const winning = auction.bids[0] ?? null;
+    const reserve = auction.minBid;
+    const qualifies = !!winning && winning.amount >= reserve;
 
     await this.prisma.auction.update({
       where: { id: auctionId },
       data: {
         status: AuctionStatus.closed,
         closedAt: new Date(),
-        winningBidId: winning?.id,
+        winningBidId: qualifies ? winning!.id : null,
       },
     });
 
-    if (!winning) {
+    if (!qualifies) {
       await this.prisma.production.update({
         where: { id: auction.productionId },
         data: { status: ProductionStatus.expired },
       });
+      await this.notifications.notify(
+        auction.production.farmerId,
+        NotificationAudience.farmer,
+        'listing_expired',
+        'No bid met your reserve price before the window closed.',
+      );
       return { closed: true, winner: null };
     }
-
-    await this.prisma.production.update({
-      where: { id: auction.productionId },
-      data: { status: ProductionStatus.sold },
-    });
 
     const farmer = await this.prisma.farmerProfile.findUnique({
       where: { userId: auction.production.farmerId },
@@ -225,7 +224,7 @@ export class AuctionsService implements OnModuleInit {
     await this.notifications.notify(
       auction.production.farmerId,
       NotificationAudience.farmer,
-      'Auction closed',
+      'listing_closed_winner',
       `Winning bid Rs. ${winning.amount}/kg. Please confirm the order.`,
     );
     await this.notifications.notify(

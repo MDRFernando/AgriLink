@@ -140,6 +140,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           context.go(AppRoutes.transporterHome);
         case UserRole.government:
           context.go(AppRoutes.governmentHome);
+        case UserRole.admin:
+          context.go(AppRoutes.adminHome);
       }
     } else {
       context.go(AppRoutes.profileSetup);

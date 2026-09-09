@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:my_app/core/router/routes.dart';
 import 'package:my_app/core/router/router_notifier.dart';
+import 'package:my_app/features/admin/screens/admin_shell.dart';
 import 'package:my_app/features/auth/screens/login_screen.dart';
 import 'package:my_app/features/auth/screens/register_screen.dart';
 import 'package:my_app/features/business/screens/business_demand_screen.dart';
@@ -11,11 +12,14 @@ import 'package:my_app/features/business/screens/business_production_detail_scre
 import 'package:my_app/features/business/screens/business_shell.dart';
 import 'package:my_app/features/business/screens/marketplace_screen.dart';
 import 'package:my_app/features/farmer/screens/add_production_screen.dart';
+import 'package:my_app/features/farmer/screens/crop_plan_form_screen.dart';
+import 'package:my_app/features/farmer/screens/crop_plan_list_screen.dart';
 import 'package:my_app/features/farmer/screens/farmer_demand_screen.dart';
 import 'package:my_app/features/farmer/screens/farmer_production_detail_screen.dart';
 import 'package:my_app/features/farmer/screens/farmer_shell.dart';
 import 'package:my_app/features/government/screens/government_alerts_screen.dart';
 import 'package:my_app/features/government/screens/government_analytics_screen.dart';
+import 'package:my_app/features/government/screens/government_crop_planning_screen.dart';
 import 'package:my_app/features/government/screens/government_logistics_screen.dart';
 import 'package:my_app/features/government/screens/government_reports_screen.dart';
 import 'package:my_app/features/government/screens/government_shell.dart';
@@ -90,6 +94,20 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const AddProductionScreen(),
       ),
       GoRoute(
+        path: AppRoutes.farmerCropPlanNew,
+        builder: (context, state) => const CropPlanFormScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.farmerCropPlanDetail,
+        builder: (context, state) {
+          return CropPlanFormScreen(planId: state.pathParameters['id']);
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.farmerCropPlans,
+        builder: (context, state) => const CropPlanListScreen(),
+      ),
+      GoRoute(
         path: AppRoutes.farmerProductionDetail,
         builder: (context, state) {
           final id = state.pathParameters['id']!;
@@ -130,6 +148,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.governmentAnalytics,
         builder: (context, state) => const GovernmentAnalyticsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.governmentCropPlanning,
+        builder: (context, state) => Scaffold(
+          appBar: AppBar(title: const Text('Crop planning insights')),
+          body: const GovernmentCropPlanningScreen(),
+        ),
       ),
       GoRoute(
         path: AppRoutes.governmentReports,
@@ -210,6 +235,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.governmentLogistics,
         builder: (context, state) => const GovernmentLogisticsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.adminHome,
+        builder: (context, state) => const AdminShell(),
       ),
     ],
   );

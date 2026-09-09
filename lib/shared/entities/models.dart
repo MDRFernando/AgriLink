@@ -56,6 +56,14 @@ class Production {
     required this.status,
     this.notes,
     this.createdAt,
+    this.qualityGrade = QualityGrade.b,
+    this.reservePrice = 0,
+    this.minIncrement = 5,
+    this.biddingWindowEnd,
+    this.auctionStatus = ListingAuctionStatus.open,
+    this.currentHighestBid = 0,
+    this.currentHighestBidderId,
+    this.moderated = false,
   });
 
   final String id;
@@ -70,6 +78,14 @@ class Production {
   final ProductionStatus status;
   final String? notes;
   final DateTime? createdAt;
+  final QualityGrade qualityGrade;
+  final double reservePrice;
+  final double minIncrement;
+  final DateTime? biddingWindowEnd;
+  final ListingAuctionStatus auctionStatus;
+  final double currentHighestBid;
+  final String? currentHighestBidderId;
+  final bool moderated;
 
   Production copyWith({
     String? cropType,
@@ -80,6 +96,15 @@ class Production {
     String? location,
     ProductionStatus? status,
     String? notes,
+    QualityGrade? qualityGrade,
+    double? reservePrice,
+    double? minIncrement,
+    DateTime? biddingWindowEnd,
+    ListingAuctionStatus? auctionStatus,
+    double? currentHighestBid,
+    String? currentHighestBidderId,
+    bool? moderated,
+    bool clearHighestBidder = false,
   }) {
     return Production(
       id: id,
@@ -94,8 +119,36 @@ class Production {
       status: status ?? this.status,
       notes: notes ?? this.notes,
       createdAt: createdAt,
+      qualityGrade: qualityGrade ?? this.qualityGrade,
+      reservePrice: reservePrice ?? this.reservePrice,
+      minIncrement: minIncrement ?? this.minIncrement,
+      biddingWindowEnd: biddingWindowEnd ?? this.biddingWindowEnd,
+      auctionStatus: auctionStatus ?? this.auctionStatus,
+      currentHighestBid: currentHighestBid ?? this.currentHighestBid,
+      currentHighestBidderId: clearHighestBidder
+          ? null
+          : (currentHighestBidderId ?? this.currentHighestBidderId),
+      moderated: moderated ?? this.moderated,
     );
   }
+}
+
+class MarketBid {
+  const MarketBid({
+    required this.id,
+    required this.listingId,
+    required this.buyerId,
+    required this.buyerName,
+    required this.amount,
+    required this.createdAt,
+  });
+
+  final String id;
+  final String listingId;
+  final String buyerId;
+  final String buyerName;
+  final double amount;
+  final DateTime createdAt;
 }
 
 class DemandRequest {
@@ -163,6 +216,151 @@ class PurchaseInterest {
       message: message,
     );
   }
+}
+
+class CropPlan {
+  const CropPlan({
+    required this.id,
+    required this.farmerId,
+    required this.farmerName,
+    required this.cropType,
+    required this.cultivationYear,
+    required this.cultivationMonth,
+    required this.areaAcres,
+    required this.province,
+    required this.district,
+    required this.dsDivision,
+    required this.village,
+    this.season,
+    this.locationNotes,
+    this.expectedYieldKg,
+    this.status = CropPlanStatus.planned,
+    this.createdAt,
+  });
+
+  final String id;
+  final String farmerId;
+  final String farmerName;
+  final String cropType;
+  final int cultivationYear;
+  final int cultivationMonth;
+  final CultivationSeason? season;
+  final double areaAcres;
+  final String province;
+  final String district;
+  final String dsDivision;
+  final String village;
+  final String? locationNotes;
+  final double? expectedYieldKg;
+  final CropPlanStatus status;
+  final DateTime? createdAt;
+
+  String get periodLabel {
+    const months = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
+    ];
+    final month = (cultivationMonth >= 1 && cultivationMonth <= 12)
+        ? months[cultivationMonth - 1]
+        : 'Month $cultivationMonth';
+    final seasonBit = season == null ? '' : ' · ${season!.label}';
+    return '$month $cultivationYear$seasonBit';
+  }
+
+  String get locationLabel => '$village, $dsDivision, $district';
+
+  CropPlan copyWith({
+    String? cropType,
+    int? cultivationYear,
+    int? cultivationMonth,
+    CultivationSeason? season,
+    bool clearSeason = false,
+    double? areaAcres,
+    String? province,
+    String? district,
+    String? dsDivision,
+    String? village,
+    String? locationNotes,
+    double? expectedYieldKg,
+    CropPlanStatus? status,
+  }) {
+    return CropPlan(
+      id: id,
+      farmerId: farmerId,
+      farmerName: farmerName,
+      cropType: cropType ?? this.cropType,
+      cultivationYear: cultivationYear ?? this.cultivationYear,
+      cultivationMonth: cultivationMonth ?? this.cultivationMonth,
+      season: clearSeason ? null : (season ?? this.season),
+      areaAcres: areaAcres ?? this.areaAcres,
+      province: province ?? this.province,
+      district: district ?? this.district,
+      dsDivision: dsDivision ?? this.dsDivision,
+      village: village ?? this.village,
+      locationNotes: locationNotes ?? this.locationNotes,
+      expectedYieldKg: expectedYieldKg ?? this.expectedYieldKg,
+      status: status ?? this.status,
+      createdAt: createdAt,
+    );
+  }
+}
+
+class CropPlanAggregate {
+  const CropPlanAggregate({
+    required this.cropType,
+    required this.province,
+    required this.district,
+    required this.dsDivision,
+    required this.village,
+    required this.cultivationYear,
+    required this.cultivationMonth,
+    required this.farmerCount,
+    required this.totalAreaAcres,
+    required this.estimatedYieldKg,
+    required this.planCount,
+  });
+
+  final String cropType;
+  final String province;
+  final String district;
+  final String dsDivision;
+  final String village;
+  final int cultivationYear;
+  final int cultivationMonth;
+  final int farmerCount;
+  final double totalAreaAcres;
+  final double estimatedYieldKg;
+  final int planCount;
+}
+
+class CropDemandInsight {
+  const CropDemandInsight({
+    required this.cropType,
+    required this.farmerCount,
+    required this.plannedAreaAcres,
+    required this.estimatedSupplyKg,
+    required this.openDemandKg,
+    required this.signal,
+    required this.message,
+  });
+
+  final String cropType;
+  final int farmerCount;
+  final double plannedAreaAcres;
+  final double estimatedSupplyKg;
+  final double openDemandKg;
+  final CropBalanceSignal signal;
+  final String message;
 }
 
 class RegionalAnalytics {

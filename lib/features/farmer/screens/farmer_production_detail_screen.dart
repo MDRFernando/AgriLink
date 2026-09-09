@@ -62,6 +62,17 @@ class FarmerProductionDetailScreen extends ConsumerWidget {
             const SectionHeader(title: 'Details'),
             const SizedBox(height: 12),
             _DetailRow(label: 'Quantity', value: '${production.quantity} ${production.unit}'),
+            _DetailRow(label: 'Grade', value: production.qualityGrade.label),
+            _DetailRow(
+              label: 'Reserve',
+              value: 'LKR ${production.reservePrice.toStringAsFixed(0)}/kg',
+            ),
+            _DetailRow(
+              label: 'Highest bid',
+              value: production.currentHighestBid > 0
+                  ? 'LKR ${production.currentHighestBid.toStringAsFixed(0)}/kg'
+                  : 'None yet',
+            ),
             _DetailRow(
               label: 'Harvest Date',
               value: DateFormat('MMMM d, yyyy').format(production.harvestDate),
