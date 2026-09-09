@@ -1,0 +1,77 @@
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# IntelliJ / Android Studio
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# VS Code / Cursor (keep shared launch configs if you add them later)
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# Flutter / Dart / Pub
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+build/
+coverage/
+
+# Symbolication
+app.*.symbols
+
+# Obfuscation
+app.*.map.json
+
+# Android Studio build artifacts
+/android/app/debug
+/android/app/profile
+/android/app/release
+
+# iOS / macOS
+**/Pods/
+**/DerivedData/
+**/xcuserdata/
+
+# Backend (Node / NestJS)
+backend/node_modules/
+backend/dist/
+backend/.env
+backend/*.db
+backend/*.db-journal
+backend/prisma/dev.db
+
+# Secrets and local env
+.env
+.env.*
+!.env.example
+!.backend/.env.example
+*.pem
+*.p12
+google-services.json
+GoogleService-Info.plist
+
+# Keystores
+key.properties
+**/*.keystore
+**/*.jks
