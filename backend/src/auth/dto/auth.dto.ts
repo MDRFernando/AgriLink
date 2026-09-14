@@ -9,7 +9,7 @@ import {
   Min,
   MinLength,
 } from 'class-validator';
-import { UserRole } from '@prisma/client';
+import { BuyerType, TransporterType, UserRole } from '@prisma/client';
 
 export class RegisterDto {
   @IsEmail()
@@ -33,6 +33,14 @@ export class RegisterDto {
   @IsOptional()
   @IsString()
   nic?: string;
+
+  @IsOptional()
+  @IsEnum(BuyerType)
+  buyerType?: BuyerType;
+
+  @IsOptional()
+  @IsEnum(TransporterType)
+  transporterType?: TransporterType;
 }
 
 export class LoginDto {
@@ -133,6 +141,14 @@ export class UpdateProfileDto {
   @IsOptional()
   @IsString()
   businessType?: string;
+
+  @IsOptional()
+  @IsEnum(BuyerType)
+  buyerType?: BuyerType;
+
+  @IsOptional()
+  @IsEnum(TransporterType)
+  transporterType?: TransporterType;
 
   @IsOptional()
   @IsString()

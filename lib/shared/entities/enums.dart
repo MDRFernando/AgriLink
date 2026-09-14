@@ -1,5 +1,49 @@
 enum UserRole { farmer, business, government, transporter, admin }
 
+enum BuyerType { company, individual }
+
+extension BuyerTypeX on BuyerType {
+  String get label {
+    switch (this) {
+      case BuyerType.company:
+        return 'Company / Business';
+      case BuyerType.individual:
+        return 'Individual Buyer';
+    }
+  }
+
+  String get description {
+    switch (this) {
+      case BuyerType.company:
+        return 'Buying for a shop, supermarket, or registered business';
+      case BuyerType.individual:
+        return 'Buying for personal or household use';
+    }
+  }
+}
+
+enum TransporterType { company, individual }
+
+extension TransporterTypeX on TransporterType {
+  String get label {
+    switch (this) {
+      case TransporterType.company:
+        return 'Transport Company / Business';
+      case TransporterType.individual:
+        return 'Individual Transport Provider';
+    }
+  }
+
+  String get description {
+    switch (this) {
+      case TransporterType.company:
+        return 'Providing transport as a registered company';
+      case TransporterType.individual:
+        return 'Providing transport independently, without a company';
+    }
+  }
+}
+
 extension UserRoleX on UserRole {
   String get label {
     switch (this) {

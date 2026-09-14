@@ -74,10 +74,12 @@ class _BusinessOverviewTab extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           WelcomeBanner(
-            title:
-                'Hello, ${profile?.organizationName ?? profile?.name ?? 'Business'}!',
-            subtitle:
-                'View listings, place bids, and arrange farm-to-business delivery',
+            title: 'Hello, ${profile?.displayName.isNotEmpty == true ? profile!.displayName : 'Buyer'}!',
+            subtitle: profile?.isIndividualBuyer == true
+                ? 'Individual buyer · View listings, place bids, and arrange delivery'
+                : profile?.isCompanyBuyer == true
+                    ? 'Company / Business buyer · View listings, place bids, and arrange farm-to-business delivery'
+                    : 'View listings, place bids, and arrange farm-to-business delivery',
           ),
           if (ref.watch(buyerOrdersProvider).any((o) => o.orderStatus == OrderStatus.deliveryRequired)) ...[
             const SizedBox(height: 16),

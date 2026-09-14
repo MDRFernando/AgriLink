@@ -3,93 +3,84 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:my_app/core/constants/app_constants.dart';
 import 'package:my_app/core/router/routes.dart';
-import 'package:my_app/core/theme/app_colors.dart';
-import 'package:my_app/core/widgets/common_widgets.dart';
+import 'package:my_app/core/widgets/crop_image.dart';
+import 'package:my_app/features/onboarding/welcome_style.dart';
 import 'package:my_app/shared/entities/enums.dart';
 import 'package:my_app/shared/providers/app_providers.dart';
 
 class RoleSelectionScreen extends ConsumerWidget {
   const RoleSelectionScreen({super.key});
 
+  static const roles = [
+    _RoleVisual(
+      role: UserRole.farmer,
+      imageUrl:
+          'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1400&q=80',
+      icon: Icons.agriculture,
+      fallbackColor: Color(0xFF3E6B3A),
+    ),
+    _RoleVisual(
+      role: UserRole.business,
+      imageUrl:
+          'https://images.unsplash.com/photo-1488459716781-31db52582fe9?auto=format&fit=crop&w=1400&q=80',
+      icon: Icons.shopping_cart_outlined,
+      fallbackColor: Color(0xFF8A4B2F),
+    ),
+    _RoleVisual(
+      role: UserRole.transporter,
+      imageUrl:
+          'https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?auto=format&fit=crop&w=1400&q=80',
+      icon: Icons.local_shipping_outlined,
+      fallbackColor: Color(0xFF2F4A5C),
+    ),
+    _RoleVisual(
+      role: UserRole.government,
+      imageUrl:
+          'https://images.unsplash.com/photo-1541872703-74c5e44368f9?auto=format&fit=crop&w=1400&q=80',
+      icon: Icons.shield_outlined,
+      fallbackColor: Color(0xFF3D3A4A),
+    ),
+  ];
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              minHeight: MediaQuery.of(context).size.height -
-                  MediaQuery.of(context).padding.top -
-                  MediaQuery.of(context).padding.bottom -
-                  48,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      backgroundColor: WelcomeStyle.paper,
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxHeight < 740;
+          final heroHeight = compact
+              ? (constraints.maxHeight * 0.38).clamp(200.0, 250.0)
+              : (constraints.maxHeight * 0.52).clamp(360.0, 560.0);
+          final roles = _RoleSection(
+            onSelect: (role) => _selectRole(context, ref, role),
+            onSignIn: () => context.go(AppRoutes.login),
+          );
+
+          if (compact) {
+            return Column(
               children: [
-              const SizedBox(height: 16),
-              const AgriLinkLogo(size: 56),
-              const SizedBox(height: 16),
-              Text(
-                'Welcome to ${AppConstants.appName}',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                AppConstants.appTagline,
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: AppColors.primaryDark,
-                      fontWeight: FontWeight.w600,
-                    ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Choose your role to get started',
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
-              ),
-              const SizedBox(height: 32),
-              _RoleCard(
-                role: UserRole.farmer,
-                color: AppColors.farmer,
-                icon: Icons.agriculture,
-                onTap: () => _selectRole(context, ref, UserRole.farmer),
-              ),
-              const SizedBox(height: 16),
-              _RoleCard(
-                role: UserRole.business,
-                color: AppColors.business,
-                icon: Icons.storefront,
-                onTap: () => _selectRole(context, ref, UserRole.business),
-              ),
-              const SizedBox(height: 16),
-              _RoleCard(
-                role: UserRole.transporter,
-                color: AppColors.transporter,
-                icon: Icons.local_shipping,
-                onTap: () => _selectRole(context, ref, UserRole.transporter),
-              ),
-              const SizedBox(height: 16),
-              _RoleCard(
-                role: UserRole.government,
-                color: AppColors.government,
-                icon: Icons.account_balance,
-                onTap: () => _selectRole(context, ref, UserRole.government),
-              ),
-              const SizedBox(height: 24),
-              Center(
-                child: TextButton(
-                  onPressed: () => context.go(AppRoutes.login),
-                  child: const Text('Already have an account? Sign in'),
+                SizedBox(
+                  height: heroHeight,
+                  child: _Hero(onSignIn: () => context.go(AppRoutes.login)),
+                ),
+                Expanded(child: SingleChildScrollView(child: roles)),
+              ],
+            );
+          }
+
+          return CustomScrollView(
+            slivers: [
+              SliverToBoxAdapter(
+                child: SizedBox(
+                  height: heroHeight,
+                  child: _Hero(onSignIn: () => context.go(AppRoutes.login)),
                 ),
               ),
-              ],
-            ),
-          ),
-        ),
+              SliverToBoxAdapter(child: roles),
+            ],
+          );
+        },
       ),
     );
   }
@@ -104,60 +95,304 @@ class RoleSelectionScreen extends ConsumerWidget {
   }
 }
 
-class _RoleCard extends StatelessWidget {
-  const _RoleCard({
-    required this.role,
-    required this.color,
-    required this.icon,
-    required this.onTap,
-  });
+class _RoleSection extends StatelessWidget {
+  const _RoleSection({required this.onSelect, required this.onSignIn});
 
-  final UserRole role;
-  final Color color;
-  final IconData icon;
-  final VoidCallback onTap;
+  final ValueChanged<UserRole> onSelect;
+  final VoidCallback onSignIn;
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Row(
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 28, 24, 40),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1080),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Icon(icon, color: color, size: 28),
+              const Text('CHOOSE YOUR ROLE', style: WelcomeStyle.eyebrow),
+              const SizedBox(height: 10),
+              Text(
+                'Four ways to enter the marketplace.',
+                style: WelcomeStyle.display.copyWith(fontSize: 26),
               ),
-              const SizedBox(width: 16),
-              Expanded(
+              const SizedBox(height: 8),
+              const Text(
+                'Select the path that matches how you work with farms and markets.',
+                style: TextStyle(
+                  color: WelcomeStyle.muted,
+                  fontSize: 15,
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: 24),
+              ResponsiveWrapGrid(
+                minTileWidth: 240,
+                maxColumns: 4,
+                spacing: 18,
+                children: [
+                  for (final visual in RoleSelectionScreen.roles)
+                    _RoleCard(
+                      visual: visual,
+                      onTap: () => onSelect(visual.role),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 28),
+              Center(
+                child: TextButton(
+                  onPressed: onSignIn,
+                  style: TextButton.styleFrom(foregroundColor: WelcomeStyle.ink),
+                  child: const Text('Already have an account? Sign in'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _Hero extends StatelessWidget {
+  const _Hero({required this.onSignIn});
+
+  final VoidCallback onSignIn;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final tight = constraints.maxHeight < 280;
+        final titleSize = tight
+            ? 28.0
+            : (MediaQuery.sizeOf(context).width < 380 ? 30.0 : 42.0);
+
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            const CropImage(cropType: 'Produce', fit: BoxFit.cover),
+            const DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Color(0x661B1916),
+                    Color(0x991B1916),
+                    Color(0xCC1B1916),
+                  ],
+                ),
+              ),
+            ),
+            SafeArea(
+              bottom: false,
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(24, 4, 24, tight ? 12 : 28),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      role.label,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
+                    Row(
+                      children: [
+                        Text(
+                          AppConstants.appName.toUpperCase(),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 13,
+                            letterSpacing: 3.4,
+                            fontWeight: FontWeight.w600,
                           ),
+                        ),
+                        const Spacer(),
+                        TextButton(
+                          onPressed: onSignIn,
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                          ),
+                          child: const Text(
+                            'Sign in',
+                            style: TextStyle(letterSpacing: 0.6),
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 4),
+                    const Spacer(),
+                    if (!tight) ...[
+                      const Text(
+                        'SRI LANKAN HARVEST, CONNECTED',
+                        style: TextStyle(
+                          color: WelcomeStyle.gold,
+                          fontSize: 11,
+                          letterSpacing: 3.2,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                    ],
                     Text(
-                      role.description,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppColors.textSecondary,
-                          ),
+                      'Welcome to AgriLink',
+                      style: WelcomeStyle.display.copyWith(
+                        color: Colors.white,
+                        fontSize: titleSize,
+                        height: 1.08,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Container(width: 44, height: 1, color: WelcomeStyle.gold),
+                    const SizedBox(height: 10),
+                    Text(
+                      AppConstants.appTagline,
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.86),
+                        fontSize: tight ? 14 : 16,
+                        height: 1.4,
+                      ),
                     ),
                   ],
                 ),
               ),
-              Icon(Icons.arrow_forward_ios, size: 16, color: color),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _RoleVisual {
+  const _RoleVisual({
+    required this.role,
+    required this.imageUrl,
+    required this.icon,
+    required this.fallbackColor,
+  });
+
+  final UserRole role;
+  final String imageUrl;
+  final IconData icon;
+  final Color fallbackColor;
+}
+
+class _RoleCard extends StatelessWidget {
+  const _RoleCard({
+    required this.visual,
+    required this.onTap,
+  });
+
+  final _RoleVisual visual;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: visual.fallbackColor,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: AspectRatio(
+          aspectRatio: 0.78,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              _RoleBackdrop(visual: visual),
+              const DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Color(0x33000000),
+                      Color(0x99000000),
+                      Color(0xCC000000),
+                    ],
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(18, 18, 18, 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.18),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.35),
+                        ),
+                      ),
+                      child: Icon(visual.icon, color: Colors.white, size: 24),
+                    ),
+                    const Spacer(),
+                    Text(
+                      visual.role.label,
+                      style: WelcomeStyle.display.copyWith(
+                        color: Colors.white,
+                        fontSize: 22,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      visual.role.description,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.86),
+                        fontSize: 13,
+                        height: 1.45,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Text(
+                      'Continue',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.92),
+                        fontSize: 12,
+                        letterSpacing: 1.4,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RoleBackdrop extends StatelessWidget {
+  const _RoleBackdrop({required this.visual});
+
+  final _RoleVisual visual;
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      color: visual.fallbackColor,
+      child: Image.network(
+        visual.imageUrl,
+        fit: BoxFit.cover,
+        width: double.infinity,
+        height: double.infinity,
+        alignment: Alignment.center,
+        filterQuality: FilterQuality.medium,
+        loadingBuilder: (context, child, progress) {
+          if (progress == null) return child;
+          return ColoredBox(color: visual.fallbackColor);
+        },
+        errorBuilder: (_, __, ___) => ColoredBox(
+          color: visual.fallbackColor,
+          child: Icon(
+            visual.icon,
+            color: Colors.white.withValues(alpha: 0.28),
+            size: 64,
           ),
         ),
       ),

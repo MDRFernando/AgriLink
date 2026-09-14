@@ -56,6 +56,16 @@ enum VerificationStatus {
   rejected
 }
 
+enum BuyerType {
+  company
+  individual
+}
+
+enum TransporterType {
+  company
+  individual
+}
+
 enum AuctionStatus {
   scheduled
   open
@@ -217,6 +227,7 @@ model BuyerProfile {
   nicOrBrn            String?
   businessName        String?
   businessType        String?
+  buyerType           BuyerType          @default(company)
   location            String?
   lat                 Float?
   lng                 Float?
@@ -502,6 +513,7 @@ model TransporterProfile {
   userId             String   @unique
   user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   company            String?
+  transporterType    TransporterType @default(company)
   rating             Float    @default(4.5)
   availabilityStatus String   @default("available")
   serviceAreasJson   String?

@@ -10,6 +10,9 @@ class UserProfile {
     this.organizationName,
     this.region,
     this.isVerified = false,
+    this.buyerType,
+    this.transporterType,
+    this.address,
   });
 
   final String id;
@@ -20,6 +23,27 @@ class UserProfile {
   final String? organizationName;
   final String? region;
   final bool isVerified;
+  final BuyerType? buyerType;
+  final TransporterType? transporterType;
+  final String? address;
+
+  bool get isIndividualBuyer =>
+      role == UserRole.business && buyerType == BuyerType.individual;
+
+  bool get isCompanyBuyer =>
+      role == UserRole.business && buyerType == BuyerType.company;
+
+  bool get isIndividualTransporter =>
+      role == UserRole.transporter &&
+      transporterType == TransporterType.individual;
+
+  bool get isCompanyTransporter =>
+      role == UserRole.transporter && transporterType == TransporterType.company;
+
+  String get displayName {
+    if (isIndividualBuyer || isIndividualTransporter) return name;
+    return organizationName ?? name;
+  }
 
   UserProfile copyWith({
     String? name,
@@ -28,6 +52,10 @@ class UserProfile {
     String? organizationName,
     String? region,
     bool? isVerified,
+    BuyerType? buyerType,
+    TransporterType? transporterType,
+    String? address,
+    bool clearOrganizationName = false,
   }) {
     return UserProfile(
       id: id,
@@ -35,9 +63,14 @@ class UserProfile {
       email: email ?? this.email,
       phone: phone ?? this.phone,
       role: role,
-      organizationName: organizationName ?? this.organizationName,
+      organizationName: clearOrganizationName
+          ? null
+          : (organizationName ?? this.organizationName),
       region: region ?? this.region,
       isVerified: isVerified ?? this.isVerified,
+      buyerType: buyerType ?? this.buyerType,
+      transporterType: transporterType ?? this.transporterType,
+      address: address ?? this.address,
     );
   }
 }

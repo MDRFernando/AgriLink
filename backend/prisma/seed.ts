@@ -10,6 +10,8 @@ import {
   UserRole,
   VehicleType,
   VerificationStatus,
+  BuyerType,
+  TransporterType,
 } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
@@ -103,6 +105,7 @@ async function main() {
         create: {
           businessName: 'ABC Supermarket',
           businessType: 'Supermarket',
+          buyerType: BuyerType.company,
           location: '123 Main Street, Colombo',
           verificationStatus: VerificationStatus.approved,
           lat: 6.9271,
@@ -138,6 +141,7 @@ async function main() {
       transporterProfile: {
         create: {
           company: 'ABC Logistics',
+          transporterType: TransporterType.company,
           rating: 4.8,
           availabilityStatus: 'available',
           serviceAreasJson: JSON.stringify(['Kurunegala', 'Colombo', 'Kandy']),
@@ -167,6 +171,7 @@ async function main() {
       transporterProfile: {
         create: {
           company: 'GreenHaul Lanka',
+          transporterType: TransporterType.company,
           rating: 4.4,
           availabilityStatus: 'available',
           lat: 7.25,

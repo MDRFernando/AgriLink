@@ -34,11 +34,13 @@ class AuthState {
 class AuthNotifier extends StateNotifier<AuthState> {
   AuthNotifier() : super(const AuthState());
 
+  final Map<String, UserProfile> _savedProfiles = {};
+
   void selectRole(UserRole role) {
     state = state.copyWith(selectedRole: role);
   }
 
-  void login({required String email}) {
+  void login({required String email, String? name}) {
     final normalized = email.trim().toLowerCase();
     final demo = state.selectedRole == UserRole.farmer
         ? (normalized == 'farmer@agrilink.lk' ? _farmerDemo() : null)
@@ -52,18 +54,30 @@ class AuthNotifier extends StateNotifier<AuthState> {
       return;
     }
 
+    final saved = _savedProfiles[normalized];
+    if (saved != null) {
+      state = AuthState(
+        isAuthenticated: true,
+        selectedRole: saved.role,
+        profile: saved,
+      );
+      return;
+    }
+
     final role = state.selectedRole ?? UserRole.farmer;
+    final profile = UserProfile(
+      id: _accountId(role, email),
+      name: name?.trim() ?? '',
+      email: email.trim(),
+      phone: '',
+      role: role,
+      isVerified: false,
+    );
+    _savedProfiles[normalized] = profile;
     state = AuthState(
       isAuthenticated: true,
       selectedRole: role,
-      profile: UserProfile(
-        id: _accountId(role, email),
-        name: '',
-        email: email,
-        phone: '',
-        role: role,
-        isVerified: false,
-      ),
+      profile: profile,
     );
   }
 
@@ -96,6 +110,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
           organizationName: 'ABC Supermarket',
           region: 'Western Province',
           isVerified: true,
+          buyerType: BuyerType.company,
+          address: '123 Main Street, Colombo',
         );
       case 'transporter@agrilink.lk':
         return const UserProfile(
@@ -107,6 +123,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
           organizationName: 'ABC Logistics',
           region: 'North Western Province',
           isVerified: true,
+          transporterType: TransporterType.company,
         );
       case 'gov@agrilink.lk':
         return const UserProfile(
@@ -141,19 +158,28 @@ class AuthNotifier extends StateNotifier<AuthState> {
     required String phone,
     String? organizationName,
     String? region,
+    String? address,
+    BuyerType? buyerType,
+    TransporterType? transporterType,
   }) {
     final current = state.profile;
     if (current == null) return;
 
-    state = state.copyWith(
-      profile: current.copyWith(
-        name: name,
-        phone: phone,
-        organizationName: organizationName,
-        region: region,
-        isVerified: true,
-      ),
+    final clearOrg = buyerType == BuyerType.individual ||
+        transporterType == TransporterType.individual;
+    final updated = current.copyWith(
+      name: name,
+      phone: phone,
+      organizationName: clearOrg ? null : organizationName,
+      clearOrganizationName: clearOrg,
+      region: region,
+      address: address,
+      buyerType: buyerType,
+      transporterType: transporterType,
+      isVerified: true,
     );
+    _savedProfiles[updated.email.trim().toLowerCase()] = updated;
+    state = state.copyWith(profile: updated);
   }
 
   void logout() {

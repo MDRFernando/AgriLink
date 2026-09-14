@@ -1,9 +1,9 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { User, UserRole } from '@prisma/client';
+import { BuyerType, TransporterType, User, UserRole } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
-import { ConflictException } from '../common/constants';
-import { JwtPayload, SafeUser, toSafeUser } from '../common/types';
+import { BadRequestException, ConflictException } from '../common/constants';
+import { JwtPayload } from '../common/types';
 import { PrismaService } from '../prisma/prisma.service';
 import { LoginDto, RegisterDto, UpdateProfileDto } from './dto/auth.dto';
 
@@ -36,13 +36,24 @@ export class AuthService {
       await this.prisma.farmerProfile.create({ data: { userId: user.id } });
     }
     if (dto.role === UserRole.business) {
+      const buyerType = dto.buyerType ?? BuyerType.company;
       await this.prisma.buyerProfile.create({
-        data: { userId: user.id, businessName: dto.name },
+        data: {
+          userId: user.id,
+          buyerType,
+          businessName: buyerType === BuyerType.individual ? null : dto.name,
+        },
       });
     }
     if (dto.role === UserRole.transporter) {
+      const transporterType = dto.transporterType ?? TransporterType.company;
       await this.prisma.transporterProfile.create({
-        data: { userId: user.id, company: dto.name, availabilityStatus: 'available' },
+        data: {
+          userId: user.id,
+          transporterType,
+          company: transporterType === TransporterType.individual ? null : dto.name,
+          availabilityStatus: 'available',
+        },
       });
     }
 
@@ -72,15 +83,68 @@ export class AuthService {
   }
 
   async updateProfile(userId: string, dto: UpdateProfileDto) {
-    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { buyerProfile: true, transporterProfile: true },
+    });
     if (!user) throw new UnauthorizedException('User not found');
+
+    const buyerType =
+      dto.buyerType ?? user.buyerProfile?.buyerType ?? BuyerType.company;
+    const isIndividualBuyer =
+      user.role === UserRole.business && buyerType === BuyerType.individual;
+    const requestedCompanyName =
+      (dto.businessName ?? dto.organizationName)?.trim() || null;
+    const companyName = isIndividualBuyer
+      ? null
+      : requestedCompanyName ??
+        user.organizationName ??
+        user.buyerProfile?.businessName ??
+        null;
+
+    const transporterType =
+      dto.transporterType ??
+      user.transporterProfile?.transporterType ??
+      TransporterType.company;
+    const isIndividualTransporter =
+      user.role === UserRole.transporter &&
+      transporterType === TransporterType.individual;
+    const transporterCompany = isIndividualTransporter
+      ? null
+      : requestedCompanyName ??
+        user.organizationName ??
+        user.transporterProfile?.company ??
+        null;
+
+    if (user.role === UserRole.business && buyerType === BuyerType.company && !companyName) {
+      throw new BadRequestException(
+        'Company name is required for company / business buyers',
+      );
+    }
+
+    if (
+      user.role === UserRole.transporter &&
+      transporterType === TransporterType.company &&
+      !transporterCompany
+    ) {
+      throw new BadRequestException(
+        'Company name is required for transport companies',
+      );
+    }
+
+    const organizationName =
+      user.role === UserRole.business
+        ? companyName
+        : user.role === UserRole.transporter
+          ? transporterCompany
+          : dto.organizationName;
 
     const updated = await this.prisma.user.update({
       where: { id: userId },
       data: {
         name: dto.name,
         phone: dto.phone,
-        organizationName: dto.organizationName,
+        organizationName,
         region: dto.region,
         nic: dto.nic,
         address: dto.address,
@@ -127,8 +191,9 @@ export class AuthService {
         create: {
           userId,
           nicOrBrn: dto.nicOrBrn,
-          businessName: dto.businessName ?? dto.organizationName,
+          businessName: companyName,
           businessType: dto.businessType,
+          buyerType,
           location: dto.buyerLocation ?? dto.address,
           preferredCropsJson: dto.preferredCropsJson,
           preferredPriceMin: dto.preferredPriceMin,
@@ -139,8 +204,9 @@ export class AuthService {
         },
         update: {
           nicOrBrn: dto.nicOrBrn,
-          businessName: dto.businessName ?? dto.organizationName,
+          businessName: companyName,
           businessType: dto.businessType,
+          buyerType,
           location: dto.buyerLocation ?? dto.address,
           preferredCropsJson: dto.preferredCropsJson,
           preferredPriceMin: dto.preferredPriceMin,
@@ -152,10 +218,26 @@ export class AuthService {
       });
     }
 
+    if (user.role === UserRole.transporter) {
+      await this.prisma.transporterProfile.upsert({
+        where: { userId },
+        create: {
+          userId,
+          company: transporterCompany,
+          transporterType,
+          availabilityStatus: 'available',
+        },
+        update: {
+          company: transporterCompany,
+          transporterType,
+        },
+      });
+    }
+
     return this.getProfile(updated.id);
   }
 
-  private buildAuthResponse(user: User) {
+  private async buildAuthResponse(user: User) {
     const payload: JwtPayload = {
       sub: user.id,
       email: user.email,
@@ -163,7 +245,7 @@ export class AuthService {
     };
     return {
       accessToken: this.jwtService.sign(payload),
-      user: toSafeUser(user),
+      user: await this.getProfile(user.id),
     };
   }
 }

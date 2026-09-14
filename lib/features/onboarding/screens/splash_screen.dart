@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:my_app/core/constants/app_constants.dart';
 import 'package:my_app/core/router/routes.dart';
-import 'package:my_app/core/theme/app_colors.dart';
 import 'package:my_app/core/widgets/common_widgets.dart';
+import 'package:my_app/features/onboarding/welcome_style.dart';
 import 'package:my_app/shared/providers/app_providers.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
@@ -24,9 +24,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1200),
+      duration: const Duration(milliseconds: 900),
     );
-    _fadeAnimation = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
+    _fadeAnimation = CurvedAnimation(parent: _controller, curve: Curves.easeOut);
     _controller.forward();
 
     Future.delayed(const Duration(seconds: 2), _navigateNext);
@@ -38,7 +38,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     final auth = ref.read(authProvider);
     if (auth.isAuthenticated) {
       if (auth.profile?.isVerified ?? false) {
-        // Router redirect will send authenticated users to their home.
         return;
       }
       context.go(AppRoutes.profileSetup);
@@ -57,38 +56,37 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        width: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [AppColors.primaryDark, AppColors.primary, AppColors.secondary],
-          ),
-        ),
-        child: FadeTransition(
-          opacity: _fadeAnimation,
+      backgroundColor: WelcomeStyle.cream,
+      body: FadeTransition(
+        opacity: _fadeAnimation,
+        child: Center(
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              const AgriLinkLogo(size: 88),
-              const SizedBox(height: 24),
+              const AgriLinkLogo(size: 52),
+              const SizedBox(height: 28),
               Text(
                 AppConstants.appName,
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w800,
-                    ),
+                style: WelcomeStyle.display.copyWith(
+                  fontSize: 42,
+                  letterSpacing: 1.2,
+                ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 16),
+              Container(
+                width: 48,
+                height: 1,
+                color: WelcomeStyle.gold,
+              ),
+              const SizedBox(height: 16),
               Text(
                 AppConstants.appTagline,
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: Colors.white.withValues(alpha: 0.85),
-                    ),
+                style: const TextStyle(
+                  color: WelcomeStyle.muted,
+                  fontSize: 15,
+                  letterSpacing: 0.3,
+                ),
               ),
-              const SizedBox(height: 48),
-              const CircularProgressIndicator(color: Colors.white),
             ],
           ),
         ),

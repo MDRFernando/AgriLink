@@ -124,6 +124,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
     ref.read(authProvider.notifier).login(
           email: _emailController.text.trim(),
+          name: _nameController.text.trim(),
         );
 
     if (!mounted) return;

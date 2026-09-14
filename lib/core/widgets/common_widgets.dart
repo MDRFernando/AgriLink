@@ -59,6 +59,7 @@ class AppTextField extends StatelessWidget {
     this.maxLines = 1,
     this.prefixIcon,
     this.onChanged,
+    this.readOnly = false,
   });
 
   final String label;
@@ -70,6 +71,7 @@ class AppTextField extends StatelessWidget {
   final int maxLines;
   final IconData? prefixIcon;
   final ValueChanged<String>? onChanged;
+  final bool readOnly;
 
   @override
   Widget build(BuildContext context) {
@@ -80,6 +82,7 @@ class AppTextField extends StatelessWidget {
       validator: validator,
       maxLines: obscureText ? 1 : maxLines,
       onChanged: onChanged,
+      readOnly: readOnly,
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
