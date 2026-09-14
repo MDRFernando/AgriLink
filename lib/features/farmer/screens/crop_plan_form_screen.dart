@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:my_app/core/constants/app_constants.dart';
 import 'package:my_app/core/constants/sri_lanka_geo.dart';
 import 'package:my_app/core/theme/app_colors.dart';
 import 'package:my_app/core/widgets/common_widgets.dart';
+import 'package:my_app/core/widgets/crop_image.dart';
 import 'package:my_app/shared/entities/enums.dart';
 import 'package:my_app/shared/entities/models.dart';
 import 'package:my_app/shared/providers/app_providers.dart';
@@ -201,12 +201,16 @@ class _CropPlanFormScreenState extends ConsumerState<CropPlanFormScreen> {
                     ),
               ),
               const SizedBox(height: 24),
-              AppDropdownField<String>(
-                label: 'Crop',
-                value: _cropType,
-                prefixIcon: Icons.grass,
-                items: AppConstants.cropTypes,
-                onChanged: (v) => setState(() => _cropType = v),
+              Text(
+                'Crop',
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+              const SizedBox(height: 12),
+              CropTypeSelector(
+                selected: _cropType,
+                onSelected: (v) => setState(() => _cropType = v),
               ),
               const SizedBox(height: 16),
               Row(

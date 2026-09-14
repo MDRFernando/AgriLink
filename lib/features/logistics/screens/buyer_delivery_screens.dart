@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:my_app/core/theme/app_colors.dart';
 import 'package:my_app/core/widgets/common_widgets.dart';
+import 'package:my_app/core/widgets/crop_image.dart';
 import 'package:my_app/features/logistics/widgets/logistics_ui.dart';
 import 'package:my_app/shared/entities/enums.dart';
 import 'package:my_app/shared/entities/models.dart';
@@ -34,6 +35,7 @@ class BuyerOrdersTab extends ConsumerWidget {
         } catch (_) {}
         return Card(
           child: ListTile(
+            leading: CropThumb(cropType: order.product),
             title: Text('${order.product} • ${formatKg(order.quantityKg)}'),
             subtitle: Text('${order.code} • ${order.orderStatus.label}\nProduct ${lkr.format(order.productTotal)}'),
             isThreeLine: true,
@@ -224,7 +226,18 @@ class _ReportIssueScreenState extends ConsumerState<ReportIssueScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Text('${job.product} ordered ${formatKg(job.quantityKg)}'),
+          Row(
+            children: [
+              CropThumb(cropType: job.product, size: 56),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  '${job.product} ordered ${formatKg(job.quantityKg)}',
+                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+                ),
+              ),
+            ],
+          ),
           const SizedBox(height: 12),
           DropdownButtonFormField<DisputeKind>(
             initialValue: _kind,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:my_app/core/theme/app_colors.dart';
 import 'package:my_app/core/widgets/common_widgets.dart';
+import 'package:my_app/core/widgets/crop_image.dart';
 import 'package:my_app/shared/entities/enums.dart';
 import 'package:my_app/shared/entities/models.dart';
 
@@ -185,6 +186,8 @@ class OrderSummaryCard extends StatelessWidget {
           children: [
             Row(
               children: [
+                CropThumb(cropType: order.product, size: 56),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     '${order.product} — ${formatKg(order.quantityKg)}',

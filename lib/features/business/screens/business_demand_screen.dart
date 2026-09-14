@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:my_app/core/widgets/cards.dart';
 import 'package:my_app/core/widgets/common_widgets.dart';
+import 'package:my_app/core/widgets/crop_image.dart';
 import 'package:my_app/shared/entities/enums.dart';
 import 'package:my_app/shared/providers/app_providers.dart';
 
@@ -35,18 +36,16 @@ class BusinessDemandScreen extends ConsumerWidget {
                   title: 'No demand requests',
                   message: 'Post what crops you need and connect with farmers.',
                 )
-              : ListView.separated(
+              : SingleChildScrollView(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                  itemCount: demands.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 12),
-                  itemBuilder: (context, index) {
-                    final demand = demands[index];
-                    if (demand.requesterRole != UserRole.business &&
-                        demand.requesterRole != UserRole.government) {
-                      return const SizedBox.shrink();
-                    }
-                    return DemandCard(demand: demand);
-                  },
+                  child: ResponsiveWrapGrid(
+                    children: [
+                      for (final demand in demands)
+                        if (demand.requesterRole == UserRole.business ||
+                            demand.requesterRole == UserRole.government)
+                          DemandCard(demand: demand),
+                    ],
+                  ),
                 ),
         ),
       ],

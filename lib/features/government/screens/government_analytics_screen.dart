@@ -2,6 +2,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:my_app/core/theme/app_colors.dart';
+import 'package:my_app/core/widgets/crop_image.dart';
 import 'package:my_app/shared/entities/models.dart';
 import 'package:my_app/shared/providers/app_providers.dart';
 
@@ -59,6 +60,8 @@ class GovernmentAnalyticsScreen extends ConsumerWidget {
                     children: [
                       Row(
                         children: [
+                          CropThumb(cropType: item.cropType, size: 48),
+                          const SizedBox(width: 12),
                           Expanded(
                             child: Text(
                               item.region,

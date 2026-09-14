@@ -5,6 +5,7 @@ import 'package:my_app/core/constants/app_constants.dart';
 import 'package:my_app/core/constants/sri_lanka_geo.dart';
 import 'package:my_app/core/theme/app_colors.dart';
 import 'package:my_app/core/widgets/common_widgets.dart';
+import 'package:my_app/core/widgets/crop_image.dart';
 import 'package:my_app/shared/entities/enums.dart';
 import 'package:my_app/shared/entities/models.dart';
 import 'package:my_app/shared/logic/crop_planning_aggregation.dart';
@@ -105,13 +106,7 @@ class _GovernmentCropPlanningScreenState
             }),
           ),
           const SizedBox(height: 24),
-          GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: 12,
-            crossAxisSpacing: 12,
-            childAspectRatio: 1.4,
+          ResponsiveStatGrid(
             children: [
               StatCard(
                 label: 'Farmers planning',
@@ -237,6 +232,7 @@ class _GovernmentCropPlanningScreenState
       padding: const EdgeInsets.only(bottom: 10),
       child: Card(
         child: ListTile(
+          leading: CropThumb(cropType: row.cropType),
           title: Text(
             row.cropType,
             style: const TextStyle(fontWeight: FontWeight.w600),
@@ -283,6 +279,8 @@ class _GovernmentCropPlanningScreenState
             children: [
               Row(
                 children: [
+                  CropThumb(cropType: insight.cropType, size: 48),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       insight.cropType,

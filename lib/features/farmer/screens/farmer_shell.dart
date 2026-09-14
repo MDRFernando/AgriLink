@@ -5,6 +5,7 @@ import 'package:my_app/core/router/routes.dart';
 import 'package:my_app/core/theme/app_colors.dart';
 import 'package:my_app/core/widgets/cards.dart';
 import 'package:my_app/core/widgets/common_widgets.dart';
+import 'package:my_app/core/widgets/crop_image.dart';
 import 'package:my_app/core/widgets/role_scaffold.dart';
 import 'package:my_app/shared/entities/enums.dart';
 import 'package:my_app/shared/entities/models.dart';
@@ -75,27 +76,13 @@ class _FarmerOverviewTab extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Hello, ${profile?.name.isNotEmpty == true ? profile!.name : 'Farmer'}!',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            profile?.region ?? 'Manage your agricultural production',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppColors.textSecondary,
-                ),
+          WelcomeBanner(
+            title:
+                'Hello, ${profile?.name.isNotEmpty == true ? profile!.name : 'Farmer'}!',
+            subtitle: profile?.region ?? 'Manage your agricultural production',
           ),
           const SizedBox(height: 24),
-          GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: 12,
-            crossAxisSpacing: 12,
-            childAspectRatio: 1.4,
+          ResponsiveStatGrid(
             children: [
               StatCard(
                 label: 'Active Productions',
@@ -151,15 +138,15 @@ class _FarmerOverviewTab extends ConsumerWidget {
               message: 'Publish a listing with crop, grade, reserve price, and bidding window.',
             )
           else
-            ...productions.take(3).map(
-                  (p) => Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: ProductionCard(
-                      production: p,
-                      onTap: () => context.push('/farmer/production/${p.id}'),
-                    ),
+            ResponsiveWrapGrid(
+              children: [
+                for (final p in productions.take(3))
+                  ProductionCard(
+                    production: p,
+                    onTap: () => context.push('/farmer/production/${p.id}'),
                   ),
-                ),
+              ],
+            ),
         ],
       ),
     );
@@ -183,17 +170,17 @@ class _FarmerProductionsTab extends ConsumerWidget {
       );
     }
 
-    return ListView.separated(
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
-      itemCount: productions.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
-      itemBuilder: (context, index) {
-        final production = productions[index];
-        return ProductionCard(
-          production: production,
-          onTap: () => context.push('/farmer/production/${production.id}'),
-        );
-      },
+      child: ResponsiveWrapGrid(
+        children: [
+          for (final production in productions)
+            ProductionCard(
+              production: production,
+              onTap: () => context.push('/farmer/production/${production.id}'),
+            ),
+        ],
+      ),
     );
   }
 }
@@ -243,14 +230,27 @@ class _FarmerBidsTab extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      listing.cropType,
-                      style: const TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                    Text(
-                      winner == null
-                          ? 'Highest bid LKR ${listing.currentHighestBid.toStringAsFixed(0)}/kg'
-                          : '${winner.buyerName} · LKR ${winner.amount.toStringAsFixed(0)}/kg',
+                    Row(
+                      children: [
+                        CropThumb(cropType: listing.cropType),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                listing.cropType,
+                                style: const TextStyle(fontWeight: FontWeight.w700),
+                              ),
+                              Text(
+                                winner == null
+                                    ? 'Highest bid LKR ${listing.currentHighestBid.toStringAsFixed(0)}/kg'
+                                    : '${winner.buyerName} · LKR ${winner.amount.toStringAsFixed(0)}/kg',
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 12),
                     Row(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:my_app/core/theme/app_colors.dart';
+import 'package:my_app/core/widgets/crop_image.dart';
 import 'package:my_app/shared/logic/aggregation_logic.dart';
 import 'package:my_app/shared/logic/bidding_logic.dart';
 import 'package:my_app/shared/providers/app_providers.dart';
@@ -49,9 +50,17 @@ class MarketVisibilityPanel extends ConsumerWidget {
         ...demands.map(
           (d) => Padding(
             padding: const EdgeInsets.only(bottom: 8),
-            child: Text(
-              '${d.cropType} · ${d.quantityNeeded.toStringAsFixed(0)} ${d.unit} · ${d.region}',
-              style: const TextStyle(color: AppColors.textSecondary),
+            child: Row(
+              children: [
+                CropThumb(cropType: d.cropType, size: 36, radius: 10),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    '${d.cropType} · ${d.quantityNeeded.toStringAsFixed(0)} ${d.unit} · ${d.region}',
+                    style: const TextStyle(color: AppColors.textSecondary),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -70,6 +79,7 @@ class _CellCard extends StatelessWidget {
     final lkr = NumberFormat.currency(symbol: 'LKR ', decimalDigits: 0);
     return Card(
       child: ListTile(
+        leading: CropThumb(cropType: cell.cropType),
         title: Text('${cell.cropType} · ${cell.region}'),
         subtitle: Text(
           cell.suppressed

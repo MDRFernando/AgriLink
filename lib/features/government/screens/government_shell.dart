@@ -6,6 +6,7 @@ import 'package:my_app/core/router/routes.dart';
 import 'package:my_app/core/theme/app_colors.dart';
 import 'package:my_app/core/widgets/cards.dart';
 import 'package:my_app/core/widgets/common_widgets.dart';
+import 'package:my_app/core/widgets/crop_image.dart';
 import 'package:my_app/core/widgets/role_scaffold.dart';
 import 'package:my_app/features/government/screens/government_alerts_screen.dart';
 import 'package:my_app/features/government/screens/government_analytics_screen.dart';
@@ -87,18 +88,9 @@ class _GovernmentOverviewTab extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            profile?.organizationName ?? 'Ministry of Agriculture',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            profile?.region ?? 'National agricultural oversight',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppColors.textSecondary,
-                ),
+          WelcomeBanner(
+            title: profile?.organizationName ?? 'Ministry of Agriculture',
+            subtitle: profile?.region ?? 'National agricultural oversight',
           ),
           const SizedBox(height: 8),
           Text(
@@ -108,13 +100,7 @@ class _GovernmentOverviewTab extends ConsumerWidget {
                 ),
           ),
           const SizedBox(height: 24),
-          GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: 12,
-            crossAxisSpacing: 12,
-            childAspectRatio: 1.4,
+          ResponsiveStatGrid(
             children: [
               StatCard(
                 label: 'Published regions',
@@ -191,6 +177,7 @@ class _GovernmentOverviewTab extends ConsumerWidget {
               child: Card(
                 child: ListTile(
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  leading: CropThumb(cropType: item.cropType),
                   title: Text(
                     item.region,
                     style: const TextStyle(fontWeight: FontWeight.w600),

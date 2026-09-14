@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:my_app/core/router/routes.dart';
+import 'package:my_app/core/widgets/common_widgets.dart';
 import 'package:my_app/shared/providers/app_providers.dart';
 
 class RoleScaffold extends ConsumerWidget {
@@ -24,7 +25,18 @@ class RoleScaffold extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(title),
+        title: Row(
+          children: [
+            const AgriLinkLogo(size: 32),
+            const SizedBox(width: 10),
+            Flexible(
+              child: Text(
+                title,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
         actions: [
           IconButton(
             tooltip: 'Notifications',

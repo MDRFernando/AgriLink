@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:my_app/core/router/routes.dart';
 import 'package:my_app/core/theme/app_colors.dart';
 import 'package:my_app/core/widgets/common_widgets.dart';
+import 'package:my_app/core/widgets/crop_image.dart';
 import 'package:my_app/shared/entities/enums.dart';
 import 'package:my_app/shared/entities/models.dart';
 import 'package:my_app/shared/providers/app_providers.dart';
@@ -57,49 +58,55 @@ class _CropPlanCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            CropImage(cropType: plan.cropType, height: 140),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: Text(
-                      plan.cropType,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 16,
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          plan.cropType,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 18,
+                          ),
+                        ),
                       ),
-                    ),
+                      StatusChip(
+                        label: plan.status.label,
+                        color: plan.status == CropPlanStatus.cancelled
+                            ? AppColors.error
+                            : plan.status == CropPlanStatus.cultivating
+                                ? AppColors.success
+                                : AppColors.farmer,
+                      ),
+                    ],
                   ),
-                  StatusChip(
-                    label: plan.status.label,
-                    color: plan.status == CropPlanStatus.cancelled
-                        ? AppColors.error
-                        : plan.status == CropPlanStatus.cultivating
-                            ? AppColors.success
-                            : AppColors.farmer,
+                  const SizedBox(height: 8),
+                  Text(
+                    plan.periodLabel,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${plan.areaAcres.toStringAsFixed(1)} acres · ${plan.locationLabel}',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
-              Text(
-                plan.periodLabel,
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                '${plan.areaAcres.toStringAsFixed(1)} acres · ${plan.locationLabel}',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

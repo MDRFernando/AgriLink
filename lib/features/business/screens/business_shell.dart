@@ -5,6 +5,7 @@ import 'package:my_app/core/router/routes.dart';
 import 'package:my_app/core/theme/app_colors.dart';
 import 'package:my_app/core/widgets/cards.dart';
 import 'package:my_app/core/widgets/common_widgets.dart';
+import 'package:my_app/core/widgets/crop_image.dart';
 import 'package:my_app/core/widgets/role_scaffold.dart';
 import 'package:my_app/features/business/screens/business_demand_screen.dart';
 import 'package:my_app/features/business/screens/business_interests_screen.dart';
@@ -72,18 +73,11 @@ class _BusinessOverviewTab extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Hello, ${profile?.organizationName ?? profile?.name ?? 'Business'}!',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'View listings, place bids, and arrange farm-to-business delivery',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppColors.textSecondary,
-                ),
+          WelcomeBanner(
+            title:
+                'Hello, ${profile?.organizationName ?? profile?.name ?? 'Business'}!',
+            subtitle:
+                'View listings, place bids, and arrange farm-to-business delivery',
           ),
           if (ref.watch(buyerOrdersProvider).any((o) => o.orderStatus == OrderStatus.deliveryRequired)) ...[
             const SizedBox(height: 16),
@@ -97,13 +91,7 @@ class _BusinessOverviewTab extends ConsumerWidget {
             ),
           ],
           const SizedBox(height: 24),
-          GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: 12,
-            crossAxisSpacing: 12,
-            childAspectRatio: 1.4,
+          ResponsiveStatGrid(
             children: [
               StatCard(
                 label: 'Open listings',
@@ -140,15 +128,15 @@ class _BusinessOverviewTab extends ConsumerWidget {
             onAction: () => context.push(AppRoutes.businessMarketplace),
           ),
           const SizedBox(height: 12),
-          ...available.take(3).map(
-                (p) => Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: ProductionCard(
-                    production: p,
-                    onTap: () => context.push('/business/production/${p.id}'),
-                  ),
+          ResponsiveWrapGrid(
+            children: [
+              for (final p in available.take(3))
+                ProductionCard(
+                  production: p,
+                  onTap: () => context.push('/business/production/${p.id}'),
                 ),
-              ),
+            ],
+          ),
         ],
       ),
     );

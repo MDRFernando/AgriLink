@@ -38,6 +38,14 @@ class RoleSelectionScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 8),
               Text(
+                AppConstants.appTagline,
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: AppColors.primaryDark,
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+              const SizedBox(height: 8),
+              Text(
                 'Choose your role to get started',
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                       color: AppColors.textSecondary,

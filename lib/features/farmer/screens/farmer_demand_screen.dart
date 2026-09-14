@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:my_app/core/widgets/cards.dart';
 import 'package:my_app/core/widgets/common_widgets.dart';
+import 'package:my_app/core/widgets/crop_image.dart';
 import 'package:my_app/shared/entities/enums.dart';
 import 'package:my_app/shared/providers/app_providers.dart';
 
@@ -22,11 +23,13 @@ class FarmerDemandScreen extends ConsumerWidget {
       );
     }
 
-    return ListView.separated(
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
-      itemCount: demands.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
-      itemBuilder: (context, index) => DemandCard(demand: demands[index]),
+      child: ResponsiveWrapGrid(
+        children: [
+          for (final demand in demands) DemandCard(demand: demand),
+        ],
+      ),
     );
   }
 }

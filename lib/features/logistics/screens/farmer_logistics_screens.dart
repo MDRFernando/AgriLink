@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:my_app/core/theme/app_colors.dart';
 import 'package:my_app/core/widgets/common_widgets.dart';
+import 'package:my_app/core/widgets/crop_image.dart';
 import 'package:my_app/features/logistics/widgets/logistics_ui.dart';
 import 'package:my_app/shared/entities/enums.dart';
 import 'package:my_app/shared/entities/models.dart';
@@ -34,6 +35,7 @@ class FarmerOrdersTab extends ConsumerWidget {
         } catch (_) {}
         return Card(
           child: ListTile(
+            leading: CropThumb(cropType: order.product),
             title: Text('${order.buyerName} — ${order.product}'),
             subtitle: Text(
               '${order.code} • ${lkr.format(order.productTotal)}\n'

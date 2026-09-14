@@ -38,7 +38,7 @@ class AgriLinkApp extends ConsumerWidget {
           );
         }
         return DefaultTextStyle.merge(
-          style: AppTheme.textStyle.copyWith(color: AppColors.textPrimary),
+          style: const TextStyle(color: AppColors.textPrimary),
           child: child,
         );
       },

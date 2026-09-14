@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:my_app/core/theme/app_colors.dart';
 import 'package:my_app/core/widgets/common_widgets.dart';
+import 'package:my_app/core/widgets/crop_image.dart';
 import 'package:my_app/shared/entities/enums.dart';
 import 'package:my_app/shared/entities/models.dart';
-import 'package:intl/intl.dart';
 
 class ProductionCard extends StatelessWidget {
   const ProductionCard({
@@ -20,97 +21,88 @@ class ProductionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: AppColors.surfaceVariant,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(Icons.grass, color: AppColors.primary),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          production.cropType,
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w700,
-                              ),
-                        ),
-                        Text(
-                          production.farmerName,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: AppColors.textSecondary,
-                              ),
-                        ),
-                      ],
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Stack(
+              children: [
+                CropImage(cropType: production.cropType, height: 168),
+                Positioned(
+                  top: 12,
+                  right: 12,
+                  child: Material(
+                    color: Colors.white.withValues(alpha: 0.92),
+                    borderRadius: BorderRadius.circular(20),
+                    child: StatusChip(
+                      label: production.auctionStatus == ListingAuctionStatus.open
+                          ? production.status.label
+                          : production.auctionStatus.label,
+                      color: _statusColor(production.status),
                     ),
                   ),
-                  StatusChip(
-                    label: production.auctionStatus == ListingAuctionStatus.open
-                        ? production.status.label
-                        : production.auctionStatus.label,
-                    color: _statusColor(production.status),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  _InfoItem(
-                    icon: Icons.scale,
-                    label: '${production.quantity.toStringAsFixed(0)} ${production.unit}',
-                  ),
-                  const SizedBox(width: 16),
-                  _InfoItem(
-                    icon: Icons.calendar_today,
-                    label: DateFormat('MMM d, yyyy').format(production.harvestDate),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  _InfoItem(
-                    icon: Icons.verified_outlined,
-                    label: production.qualityGrade.label,
-                  ),
-                  const SizedBox(width: 16),
-                  _InfoItem(
-                    icon: Icons.gavel,
-                    label: production.currentHighestBid > 0
-                        ? 'LKR ${production.currentHighestBid.toStringAsFixed(0)}/kg'
-                        : 'Reserve LKR ${production.reservePrice.toStringAsFixed(0)}/kg',
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  _InfoItem(
-                    icon: Icons.location_on_outlined,
-                    label: '${production.location}, ${production.region}',
-                  ),
-                ],
-              ),
-              if (trailing != null) ...[
-                const SizedBox(height: 12),
-                trailing!,
+                ),
               ],
-            ],
-          ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    production.cropType,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    production.farmerName,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 16,
+                    runSpacing: 8,
+                    children: [
+                      _InfoItem(
+                        icon: Icons.scale,
+                        label:
+                            '${production.quantity.toStringAsFixed(0)} ${production.unit}',
+                      ),
+                      _InfoItem(
+                        icon: Icons.calendar_today,
+                        label: DateFormat('MMM d, yyyy')
+                            .format(production.harvestDate),
+                      ),
+                      _InfoItem(
+                        icon: Icons.verified_outlined,
+                        label: production.qualityGrade.label,
+                      ),
+                      _InfoItem(
+                        icon: Icons.gavel,
+                        label: production.currentHighestBid > 0
+                            ? 'LKR ${production.currentHighestBid.toStringAsFixed(0)}/kg'
+                            : 'Reserve LKR ${production.reservePrice.toStringAsFixed(0)}/kg',
+                      ),
+                      _InfoItem(
+                        icon: Icons.location_on_outlined,
+                        label: '${production.location}, ${production.region}',
+                      ),
+                    ],
+                  ),
+                  if (trailing != null) ...[
+                    const SizedBox(height: 12),
+                    trailing!,
+                  ],
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -142,64 +134,75 @@ class DemandCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CropImage(cropType: demand.cropType, height: 140),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Text(
-                    demand.cropType,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        demand.cropType,
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.w800,
+                            ),
+                      ),
+                    ),
+                    StatusChip(
+                      label: demand.status.label,
+                      color: demand.status == DemandStatus.open
+                          ? AppColors.success
+                          : AppColors.textSecondary,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  demand.requesterName,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 16,
+                  runSpacing: 8,
+                  children: [
+                    _InfoItem(
+                      icon: Icons.scale,
+                      label:
+                          '${demand.quantityNeeded.toStringAsFixed(0)} ${demand.unit}',
+                    ),
+                    _InfoItem(
+                      icon: Icons.event,
+                      label: 'By ${DateFormat('MMM d').format(demand.deadline)}',
+                    ),
+                    _InfoItem(
+                      icon: Icons.location_on_outlined,
+                      label: demand.region,
+                    ),
+                  ],
+                ),
+                if (demand.notes != null) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    demand.notes!,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppColors.textSecondary,
+                          fontStyle: FontStyle.italic,
                         ),
                   ),
-                ),
-                StatusChip(
-                  label: demand.status.label,
-                  color: demand.status == DemandStatus.open
-                      ? AppColors.success
-                      : AppColors.textSecondary,
-                ),
+                ],
               ],
             ),
-            const SizedBox(height: 8),
-            Text(
-              demand.requesterName,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                _InfoItem(
-                  icon: Icons.scale,
-                  label: '${demand.quantityNeeded.toStringAsFixed(0)} ${demand.unit}',
-                ),
-                const SizedBox(width: 16),
-                _InfoItem(
-                  icon: Icons.event,
-                  label: 'By ${DateFormat('MMM d').format(demand.deadline)}',
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            _InfoItem(icon: Icons.location_on_outlined, label: demand.region),
-            if (demand.notes != null) ...[
-              const SizedBox(height: 8),
-              Text(
-                demand.notes!,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.textSecondary,
-                      fontStyle: FontStyle.italic,
-                    ),
-              ),
-            ],
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -229,12 +232,24 @@ class InterestCard extends StatelessWidget {
           children: [
             Row(
               children: [
+                CropThumb(cropType: interest.cropType, size: 56),
+                const SizedBox(width: 12),
                 Expanded(
-                  child: Text(
-                    interest.businessName,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        interest.businessName,
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${interest.quantity.toStringAsFixed(0)} ${interest.unit} of ${interest.cropType}',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ],
                   ),
                 ),
                 StatusChip(
@@ -242,11 +257,6 @@ class InterestCard extends StatelessWidget {
                   color: _interestColor(interest.status),
                 ),
               ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '${interest.quantity.toStringAsFixed(0)} ${interest.unit} of ${interest.cropType}',
-              style: Theme.of(context).textTheme.bodyMedium,
             ),
             if (interest.message != null) ...[
               const SizedBox(height: 8),
@@ -310,21 +320,24 @@ class _InfoItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 14, color: AppColors.textSecondary),
-        const SizedBox(width: 4),
-        Flexible(
-          child: Text(
-            label,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppColors.textSecondary,
-                ),
-            overflow: TextOverflow.ellipsis,
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 260),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: AppColors.textSecondary),
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text(
+              label,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

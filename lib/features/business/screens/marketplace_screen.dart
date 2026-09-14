@@ -5,6 +5,7 @@ import 'package:my_app/core/constants/app_constants.dart';
 import 'package:my_app/core/theme/app_colors.dart';
 import 'package:my_app/core/widgets/cards.dart';
 import 'package:my_app/core/widgets/common_widgets.dart';
+import 'package:my_app/core/widgets/crop_image.dart';
 import 'package:my_app/shared/providers/app_providers.dart';
 
 class MarketplaceScreen extends ConsumerStatefulWidget {
@@ -103,17 +104,19 @@ class _MarketplaceScreenState extends ConsumerState<MarketplaceScreen> {
                   title: 'No matching supply',
                   message: 'Try adjusting your filters or check back later.',
                 )
-              : ListView.separated(
+              : SingleChildScrollView(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                  itemCount: productions.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 12),
-                  itemBuilder: (context, index) {
-                    final production = productions[index];
-                    return ProductionCard(
-                      production: production,
-                      onTap: () => context.push('/business/production/${production.id}'),
-                    );
-                  },
+                  child: ResponsiveWrapGrid(
+                    children: [
+                      for (final production in productions)
+                        ProductionCard(
+                          production: production,
+                          onTap: () => context.push(
+                            '/business/production/${production.id}',
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
         ),
       ],
@@ -129,6 +132,7 @@ class _MarketplaceScreenState extends ConsumerState<MarketplaceScreen> {
           children: AppConstants.cropTypes
               .map(
                 (crop) => ListTile(
+                  leading: CropThumb(cropType: crop, size: 44, radius: 12),
                   title: Text(crop),
                   onTap: () {
                     setState(() => _cropFilter = crop);

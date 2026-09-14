@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:my_app/core/theme/app_colors.dart';
 import 'package:my_app/core/widgets/cards.dart';
 import 'package:my_app/core/widgets/common_widgets.dart';
+import 'package:my_app/core/widgets/crop_image.dart';
 import 'package:my_app/shared/entities/enums.dart';
 import 'package:my_app/shared/providers/app_providers.dart';
 
@@ -51,13 +52,7 @@ class GovernmentAlertsScreen extends ConsumerWidget {
                     padding: const EdgeInsets.all(16),
                     child: Row(
                       children: [
-                        Icon(
-                          item.alertType == SupplyAlertType.shortage
-                              ? Icons.trending_down
-                              : Icons.trending_up,
-                          color: alertTypeColor(item.alertType),
-                          size: 32,
-                        ),
+                        CropThumb(cropType: item.cropType, size: 56),
                         const SizedBox(width: 16),
                         Expanded(
                           child: Column(
@@ -113,7 +108,7 @@ class GovernmentAlertsScreen extends ConsumerWidget {
                       borderRadius: BorderRadius.circular(12),
                       side: const BorderSide(color: AppColors.border),
                     ),
-                    leading: const Icon(Icons.check_circle, color: AppColors.info),
+                    leading: CropThumb(cropType: item.cropType, size: 44, radius: 12),
                     title: Text(item.region),
                     subtitle: Text('${item.cropType} — ${item.totalQuantity.toStringAsFixed(0)} ${item.unit}'),
                   ),

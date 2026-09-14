@@ -7,9 +7,11 @@ abstract final class AppColors {
   static const secondary = Color(0xFF558B2F);
   static const accent = Color(0xFFFF8F00);
 
-  static const background = Color(0xFFF5F7F2);
+  static const background = Color(0xFFF3F6F0);
   static const surface = Colors.white;
   static const surfaceVariant = Color(0xFFE8F5E9);
+  static const bannerStart = Color(0xFF1B5E20);
+  static const bannerEnd = Color(0xFF43A047);
 
   static const textPrimary = Color(0xFF1A1A1A);
   static const textSecondary = Color(0xFF616161);

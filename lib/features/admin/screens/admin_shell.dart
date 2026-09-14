@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:my_app/core/theme/app_colors.dart';
+import 'package:my_app/core/widgets/crop_image.dart';
 import 'package:my_app/core/widgets/role_scaffold.dart';
 import 'package:my_app/features/government/screens/government_logistics_screen.dart';
 import 'package:my_app/shared/entities/enums.dart';
@@ -70,6 +71,7 @@ class _ListingModerationTab extends ConsumerWidget {
         final listing = listings[index - 1];
         return Card(
           child: ListTile(
+            leading: CropThumb(cropType: listing.cropType),
             title: Text('${listing.cropType} · ${listing.farmerName}'),
             subtitle: Text(
               '${listing.quantity.toStringAsFixed(0)} ${listing.unit} · ${listing.auctionStatus.label}',
