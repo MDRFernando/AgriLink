@@ -86,6 +86,92 @@ void main() {
     });
   });
 
+  group('submit_offer (quantity bids)', () {
+    test('rejects zero and negative quantity', () {
+      expect(
+        BidEngine.submitOfferError(
+          listingActive: true,
+          now: DateTime(2026, 9, 1),
+          biddingWindowEnd: DateTime(2026, 9, 3),
+          reservePrice: 80,
+          bidAmount: 90,
+          quantity: 0,
+          availableQuantity: 500,
+        ),
+        'Quantity must be greater than zero',
+      );
+      expect(
+        BidEngine.submitOfferError(
+          listingActive: true,
+          now: DateTime(2026, 9, 1),
+          biddingWindowEnd: DateTime(2026, 9, 3),
+          reservePrice: 80,
+          bidAmount: 90,
+          quantity: -10,
+          availableQuantity: 500,
+        ),
+        'Quantity must be greater than zero',
+      );
+    });
+
+    test('rejects quantity above available stock', () {
+      expect(
+        BidEngine.submitOfferError(
+          listingActive: true,
+          now: DateTime(2026, 9, 1),
+          biddingWindowEnd: DateTime(2026, 9, 3),
+          reservePrice: 80,
+          bidAmount: 90,
+          quantity: 600,
+          availableQuantity: 500,
+        ),
+        'Quantity exceeds available stock',
+      );
+    });
+
+    test('rejects invalid price and bids after closing', () {
+      expect(
+        BidEngine.submitOfferError(
+          listingActive: true,
+          now: DateTime(2026, 9, 1),
+          biddingWindowEnd: DateTime(2026, 9, 3),
+          reservePrice: 80,
+          bidAmount: 0,
+          quantity: 100,
+          availableQuantity: 500,
+        ),
+        'Enter a valid bid price',
+      );
+      expect(
+        BidEngine.submitOfferError(
+          listingActive: true,
+          now: DateTime(2026, 9, 4),
+          biddingWindowEnd: DateTime(2026, 9, 3),
+          reservePrice: 80,
+          bidAmount: 90,
+          quantity: 100,
+          availableQuantity: 500,
+        ),
+        'Bidding window has closed',
+      );
+    });
+
+    test('accepts a 100 kg tomato offer at or above reserve', () {
+      expect(
+        BidEngine.submitOfferError(
+          listingActive: true,
+          now: DateTime(2026, 9, 1),
+          biddingWindowEnd: DateTime(2026, 9, 3),
+          reservePrice: 80,
+          bidAmount: 90,
+          quantity: 100,
+          availableQuantity: 500,
+        ),
+        isNull,
+      );
+    });
+  });
+
   group('generate_aggregated_report (Ch. 5.3)', () {
     Production listing(String id, String farmer) => Production(
           id: id,

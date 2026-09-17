@@ -1,6 +1,6 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { BuyerType, TransporterType, User, UserRole } from '@prisma/client';
+import { BuyerType, TransporterType, User, UserRole, VerificationStatus } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { BadRequestException, ConflictException } from '../common/constants';
 import { JwtPayload } from '../common/types';
@@ -150,7 +150,7 @@ export class AuthService {
         address: dto.address,
         district: dto.district,
         province: dto.province ?? dto.region,
-        isVerified: user.role === UserRole.business ? user.isVerified : true,
+        isVerified: true,
       },
     });
 
@@ -201,6 +201,7 @@ export class AuthService {
           requiredQuantityKg: dto.requiredQuantityKg,
           lat: dto.lat,
           lng: dto.lng,
+          verificationStatus: VerificationStatus.approved,
         },
         update: {
           nicOrBrn: dto.nicOrBrn,
@@ -214,6 +215,7 @@ export class AuthService {
           requiredQuantityKg: dto.requiredQuantityKg,
           lat: dto.lat,
           lng: dto.lng,
+          verificationStatus: VerificationStatus.approved,
         },
       });
     }

@@ -1,5 +1,6 @@
 import {
   AuctionStatus,
+  BidStatus,
   CropPlanStatus,
   CultivationSeason,
   DemandStatus,
@@ -374,7 +375,16 @@ async function main() {
   });
 
   const winningBid = await prisma.bid.create({
-    data: { auctionId: auction.id, buyerId: business.id, amount: 180 },
+    data: {
+      auctionId: auction.id,
+      productionId: banana.id,
+      buyerId: business.id,
+      farmerId: farmer1.id,
+      quantity: 500,
+      amount: 180,
+      totalAmount: 90000,
+      status: BidStatus.accepted,
+    },
   });
 
   await prisma.auction.update({
@@ -385,6 +395,7 @@ async function main() {
   const order = await prisma.order.create({
     data: {
       auctionId: auction.id,
+      acceptedBidId: winningBid.id,
       productionId: banana.id,
       farmerId: farmer1.id,
       buyerId: business.id,

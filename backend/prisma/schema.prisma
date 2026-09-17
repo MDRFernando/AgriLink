@@ -73,6 +73,13 @@ enum AuctionStatus {
   cancelled
 }
 
+enum BidStatus {
+  pending
+  accepted
+  declined
+  expired
+}
+
 enum OrderStatus {
   pending_farmer
   pending_buyer
@@ -182,7 +189,8 @@ model User {
   interests        PurchaseInterest[]
   farmerProfile    FarmerProfile?
   buyerProfile     BuyerProfile?
-  bids             Bid[]
+  bids             Bid[]             @relation("BuyerBids")
+  farmerBids       Bid[]             @relation("FarmerBids")
   buyerOrders      Order[]           @relation("BuyerOrders")
   farmerOrders     Order[]           @relation("FarmerOrders")
   paymentsAsBuyer  Payment[]         @relation("BuyerPayments")
@@ -329,20 +337,34 @@ model Auction {
 }
 
 model Bid {
-  id        String   @id @default(uuid())
-  auctionId String
-  auction   Auction  @relation(fields: [auctionId], references: [id], onDelete: Cascade)
-  buyerId   String
-  buyer     User     @relation(fields: [buyerId], references: [id], onDelete: Cascade)
-  amount    Float
-  createdAt DateTime @default(now())
+  id            String    @id @default(uuid())
+  auctionId     String
+  auction       Auction   @relation(fields: [auctionId], references: [id], onDelete: Cascade)
+  productionId  String
+  buyerId       String
+  buyer         User      @relation("BuyerBids", fields: [buyerId], references: [id], onDelete: Cascade)
+  farmerId      String
+  farmer        User      @relation("FarmerBids", fields: [farmerId], references: [id], onDelete: Cascade)
+  quantity      Float
+  amount        Float
+  totalAmount   Float
+  status        BidStatus @default(pending)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  order Order?
 
   @@index([auctionId, createdAt])
+  @@index([farmerId, status])
+  @@index([buyerId, status])
+  @@index([productionId, status])
 }
 
 model Order {
   id               String      @id @default(uuid())
-  auctionId        String      @unique
+  auctionId        String
+  acceptedBidId    String?     @unique
+  acceptedBid      Bid?        @relation(fields: [acceptedBidId], references: [id])
   productionId     String
   farmerId         String
   farmer           User        @relation("FarmerOrders", fields: [farmerId], references: [id])

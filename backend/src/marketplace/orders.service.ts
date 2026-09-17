@@ -41,14 +41,33 @@ export class OrdersService {
         : user.role === UserRole.business
           ? { buyerId: user.id }
           : { id: '__none__' };
-    return this.prisma.order.findMany({
+    const orders = await this.prisma.order.findMany({
       where,
       include: {
+        farmer: { select: { name: true } },
+        buyer: { select: { name: true, organizationName: true } },
         transportation: true,
         payment: true,
         events: { orderBy: { createdAt: 'asc' } },
       },
       orderBy: { createdAt: 'desc' },
+    });
+    const productionIds = [...new Set(orders.map((o) => o.productionId))];
+    const productions = await this.prisma.production.findMany({
+      where: { id: { in: productionIds } },
+      select: { id: true, cropType: true, location: true, region: true },
+    });
+    const byId = new Map(productions.map((p) => [p.id, p]));
+    return orders.map((order) => {
+      const production = byId.get(order.productionId);
+      return {
+        ...order,
+        cropType: production?.cropType ?? 'Produce',
+        farmerName: order.farmer.name ?? 'Farmer',
+        buyerName: order.buyer.organizationName ?? order.buyer.name ?? 'Buyer',
+        pickupLabel: order.transportation?.farmerLocation ?? production?.location ?? '',
+        pickupCity: production?.region ?? '',
+      };
     });
   }
 
@@ -101,6 +120,7 @@ export class OrdersService {
         'Please confirm the order to proceed to payment.',
       );
       return updated;
+    }
 
     if (user.id === order.buyerId && order.farmerConfirmed && !order.buyerConfirmed) {
       const updated = await this.prisma.order.update({

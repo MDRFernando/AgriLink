@@ -43,6 +43,37 @@ class BidEngine {
     return null;
   }
 
+  /// Offer-style bid: quantity + price, reviewed by the farmer.
+  static String? submitOfferError({
+    required bool listingActive,
+    required DateTime now,
+    DateTime? biddingWindowEnd,
+    required double reservePrice,
+    required double bidAmount,
+    required double quantity,
+    required double availableQuantity,
+  }) {
+    if (!listingActive) {
+      return 'Listing is not open for bidding';
+    }
+    if (biddingWindowEnd != null && now.isAfter(biddingWindowEnd)) {
+      return 'Bidding window has closed';
+    }
+    if (quantity <= 0) {
+      return 'Quantity must be greater than zero';
+    }
+    if (quantity > availableQuantity) {
+      return 'Quantity exceeds available stock';
+    }
+    if (bidAmount <= 0) {
+      return 'Enter a valid bid price';
+    }
+    if (bidAmount < reservePrice) {
+      return "Bid is below farmer's reserve price";
+    }
+    return null;
+  }
+
   static bool qualifiesForFarmerConfirmation({
     required double currentHighestBid,
     required double reservePrice,

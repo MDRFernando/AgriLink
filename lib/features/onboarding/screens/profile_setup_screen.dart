@@ -280,7 +280,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
     );
   }
 
-  void _submit() {
+  void _submit() async {
     final role = ref.read(authProvider).selectedRole ?? UserRole.farmer;
     final isBuyer = role == UserRole.business;
     final isTransporter = role == UserRole.transporter;
@@ -313,7 +313,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
     final hideCompany = (isBuyer && _buyerType == BuyerType.individual) ||
         (isTransporter && _transporterType == TransporterType.individual);
 
-    ref.read(authProvider.notifier).completeProfile(
+    final error = await ref.read(authProvider.notifier).completeProfileRemote(
           name: _nameController.text.trim(),
           phone: _phoneController.text.trim(),
           organizationName: hideCompany
@@ -326,6 +326,11 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
           buyerType: isBuyer ? _buyerType : null,
           transporterType: isTransporter ? _transporterType : null,
         );
+    if (!mounted) return;
+    if (error != null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
+      return;
+    }
 
     final profileRole = ref.read(authProvider).profile?.role ?? UserRole.farmer;
     switch (profileRole) {

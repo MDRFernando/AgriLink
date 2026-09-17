@@ -35,10 +35,9 @@ class RoleSelectionScreen extends ConsumerWidget {
     ),
     _RoleVisual(
       role: UserRole.government,
-      imageUrl:
-          'https://images.unsplash.com/photo-1541872703-74c5e44368f9?auto=format&fit=crop&w=1400&q=80',
-      icon: Icons.shield_outlined,
-      fallbackColor: Color(0xFF3D3A4A),
+      cropType: 'Tea',
+      icon: Icons.agriculture_outlined,
+      fallbackColor: Color(0xFF2F4A35),
     ),
   ];
 
@@ -264,13 +263,15 @@ class _Hero extends StatelessWidget {
 class _RoleVisual {
   const _RoleVisual({
     required this.role,
-    required this.imageUrl,
+    this.imageUrl,
+    this.cropType,
     required this.icon,
     required this.fallbackColor,
   });
 
   final UserRole role;
-  final String imageUrl;
+  final String? imageUrl;
+  final String? cropType;
   final IconData icon;
   final Color fallbackColor;
 }
@@ -295,6 +296,7 @@ class _RoleCard extends StatelessWidget {
           aspectRatio: 0.78,
           child: Stack(
             fit: StackFit.expand,
+            clipBehavior: Clip.hardEdge,
             children: [
               _RoleBackdrop(visual: visual),
               const DecoratedBox(
@@ -330,6 +332,8 @@ class _RoleCard extends StatelessWidget {
                     const Spacer(),
                     Text(
                       visual.role.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: WelcomeStyle.display.copyWith(
                         color: Colors.white,
                         fontSize: 22,
@@ -376,26 +380,28 @@ class _RoleBackdrop extends StatelessWidget {
   Widget build(BuildContext context) {
     return ColoredBox(
       color: visual.fallbackColor,
-      child: Image.network(
-        visual.imageUrl,
-        fit: BoxFit.cover,
-        width: double.infinity,
-        height: double.infinity,
-        alignment: Alignment.center,
-        filterQuality: FilterQuality.medium,
-        loadingBuilder: (context, child, progress) {
-          if (progress == null) return child;
-          return ColoredBox(color: visual.fallbackColor);
-        },
-        errorBuilder: (_, __, ___) => ColoredBox(
-          color: visual.fallbackColor,
-          child: Icon(
-            visual.icon,
-            color: Colors.white.withValues(alpha: 0.28),
-            size: 64,
-          ),
-        ),
-      ),
+      child: visual.cropType != null
+          ? CropImage(cropType: visual.cropType!, fit: BoxFit.cover)
+          : Image.network(
+              visual.imageUrl!,
+              fit: BoxFit.cover,
+              width: double.infinity,
+              height: double.infinity,
+              alignment: Alignment.center,
+              filterQuality: FilterQuality.medium,
+              loadingBuilder: (context, child, progress) {
+                if (progress == null) return child;
+                return ColoredBox(color: visual.fallbackColor);
+              },
+              errorBuilder: (_, __, ___) => ColoredBox(
+                color: visual.fallbackColor,
+                child: Icon(
+                  visual.icon,
+                  color: Colors.white.withValues(alpha: 0.28),
+                  size: 64,
+                ),
+              ),
+            ),
     );
   }
 }

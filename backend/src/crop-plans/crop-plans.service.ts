@@ -62,7 +62,7 @@ export class CropPlansService {
     return this.prisma.cropPlan.update({ where: { id }, data: dto });
   }
 
-  async cancel(user: JwtUser, id: string) {
+  async cancel(user: SafeUser, id: string) {
     return this.update(user, id, { status: CropPlanStatus.cancelled });
   }
 

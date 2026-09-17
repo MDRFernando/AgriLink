@@ -130,8 +130,12 @@ class ResponsiveWrapGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final width = constraints.maxWidth;
-        final columns = (width / minTileWidth).floor().clamp(1, maxColumns);
+        final width = constraints.maxWidth.isFinite
+            ? constraints.maxWidth
+            : minTileWidth;
+        final columns = ((width + spacing) / (minTileWidth + spacing))
+            .floor()
+            .clamp(1, maxColumns);
         final tileWidth = columns == 1
             ? width
             : (width - spacing * (columns - 1)) / columns;

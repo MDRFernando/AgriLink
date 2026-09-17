@@ -17,14 +17,26 @@ class BuyerOrdersTab extends ConsumerWidget {
     final orders = ref.watch(buyerOrdersProvider);
     final jobs = ref.watch(logisticsProvider).jobs;
     if (orders.isEmpty) {
-      return const EmptyStateView(
-        icon: Icons.receipt_long,
-        title: 'No orders yet',
-        message: 'Accept a winning bid from the marketplace to start farm-to-business delivery.',
+      return RefreshIndicator(
+        onRefresh: () => ref.read(logisticsProvider.notifier).syncOrders(),
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: const [
+            SizedBox(height: 120),
+            EmptyStateView(
+              icon: Icons.receipt_long,
+              title: 'No orders yet',
+              message: 'When a farmer accepts your bid, the order appears here so you can pay and arrange delivery.',
+            ),
+          ],
+        ),
       );
     }
-    return ListView.separated(
-      padding: const EdgeInsets.all(16),
+    return RefreshIndicator(
+      onRefresh: () => ref.read(logisticsProvider.notifier).syncOrders(),
+      child: ListView.separated(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
       itemCount: orders.length,
       separatorBuilder: (_, __) => const SizedBox(height: 12),
       itemBuilder: (context, i) {
@@ -55,6 +67,7 @@ class BuyerOrdersTab extends ConsumerWidget {
           ),
         );
       },
+      ),
     );
   }
 }

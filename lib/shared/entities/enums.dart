@@ -151,6 +151,23 @@ extension ProductionStatusX on ProductionStatus {
   }
 }
 
+enum BidStatus { pending, accepted, declined, expired }
+
+extension BidStatusX on BidStatus {
+  String get label {
+    switch (this) {
+      case BidStatus.pending:
+        return 'Pending';
+      case BidStatus.accepted:
+        return 'Accepted';
+      case BidStatus.declined:
+        return 'Declined';
+      case BidStatus.expired:
+        return 'Expired';
+    }
+  }
+}
+
 enum InterestStatus { pending, accepted, rejected }
 
 extension InterestStatusX on InterestStatus {

@@ -201,7 +201,7 @@ class _AddProductionScreenState extends ConsumerState<AddProductionScreen> {
     if (date != null) setState(() => _harvestDate = date);
   }
 
-  void _save() {
+  Future<void> _save() async {
     if (_cropType == null || _region == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please select crop type and region')),
@@ -238,7 +238,12 @@ class _AddProductionScreenState extends ConsumerState<AddProductionScreen> {
       auctionStatus: ListingAuctionStatus.open,
     );
 
-    ref.read(appDataProvider.notifier).addProduction(production);
+    final error = await ref.read(appDataProvider.notifier).publishProduction(production);
+    if (!mounted) return;
+    if (error != null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
+      return;
+    }
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Production added successfully')),

@@ -170,18 +170,55 @@ class MarketBid {
   const MarketBid({
     required this.id,
     required this.listingId,
+    required this.farmerId,
     required this.buyerId,
     required this.buyerName,
+    required this.cropType,
+    required this.quantity,
+    required this.unit,
     required this.amount,
     required this.createdAt,
+    this.status = BidStatus.pending,
+    this.biddingWindowEnd,
+    this.orderId,
   });
 
   final String id;
   final String listingId;
+  final String farmerId;
   final String buyerId;
   final String buyerName;
+  final String cropType;
+  final double quantity;
+  final String unit;
   final double amount;
   final DateTime createdAt;
+  final BidStatus status;
+  final DateTime? biddingWindowEnd;
+  final String? orderId;
+
+  double get totalAmount => quantity * amount;
+
+  MarketBid copyWith({
+    BidStatus? status,
+    String? orderId,
+  }) {
+    return MarketBid(
+      id: id,
+      listingId: listingId,
+      farmerId: farmerId,
+      buyerId: buyerId,
+      buyerName: buyerName,
+      cropType: cropType,
+      quantity: quantity,
+      unit: unit,
+      amount: amount,
+      createdAt: createdAt,
+      status: status ?? this.status,
+      biddingWindowEnd: biddingWindowEnd,
+      orderId: orderId ?? this.orderId,
+    );
+  }
 }
 
 class DemandRequest {
@@ -437,6 +474,8 @@ class MarketOrder {
     required this.unitPrice,
     required this.orderStatus,
     required this.productPaymentStatus,
+    this.listingId,
+    this.acceptedBidId,
     this.pickupLabel = '',
     this.pickupCity = '',
     this.pickupLat = 7.4863,
@@ -454,6 +493,8 @@ class MarketOrder {
   final double unitPrice;
   final OrderStatus orderStatus;
   final PaymentRecordStatus productPaymentStatus;
+  final String? listingId;
+  final String? acceptedBidId;
   final String pickupLabel;
   final String pickupCity;
   final double pickupLat;
@@ -477,6 +518,8 @@ class MarketOrder {
       unitPrice: unitPrice,
       orderStatus: orderStatus ?? this.orderStatus,
       productPaymentStatus: productPaymentStatus ?? this.productPaymentStatus,
+      listingId: listingId,
+      acceptedBidId: acceptedBidId,
       pickupLabel: pickupLabel,
       pickupCity: pickupCity,
       pickupLat: pickupLat,

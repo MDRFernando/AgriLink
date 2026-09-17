@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:my_app/core/api/api_client.dart';
 import 'package:my_app/shared/entities/enums.dart';
 import 'package:my_app/shared/entities/models.dart';
 import 'package:my_app/shared/providers/app_providers.dart';
@@ -178,6 +179,7 @@ class LogisticsNotifier extends StateNotifier<LogisticsState> {
     required UserProfile buyer,
     required double quantityKg,
     required double unitPrice,
+    String? acceptedBidId,
   }) {
     final order = MarketOrder(
       id: 'ord-${DateTime.now().millisecondsSinceEpoch}',
@@ -191,12 +193,42 @@ class LogisticsNotifier extends StateNotifier<LogisticsState> {
       unitPrice: unitPrice,
       orderStatus: OrderStatus.confirmed,
       productPaymentStatus: PaymentRecordStatus.pending,
+      listingId: production.id,
+      acceptedBidId: acceptedBidId,
       pickupLabel: production.location,
       pickupCity: production.region,
     );
     state = state.copyWith(orders: [order, ...state.orders]);
     notify(production.farmerId, 'Order purchased', '${order.buyerName} wants ${order.product}.');
     return order;
+  }
+
+  Future<void> syncOrders() async {
+    if (!AgriLinkApi.instance.hasToken) return;
+    try {
+      final incoming = await AgriLinkApi.instance.fetchOrders();
+      state = state.copyWith(orders: incoming);
+    } on AgriLinkApiException {
+      // Keep local logistics if the API is briefly unavailable.
+    }
+  }
+
+  void mergeOrders(List<MarketOrder> incoming) {
+    if (incoming.isEmpty) return;
+    final existingIds = state.orders.map((o) => o.id).toSet();
+    final existingBids = state.orders
+        .map((o) => o.acceptedBidId)
+        .whereType<String>()
+        .toSet();
+    final extras = incoming.where((o) {
+      if (existingIds.contains(o.id)) return false;
+      if (o.acceptedBidId != null && existingBids.contains(o.acceptedBidId)) {
+        return false;
+      }
+      return true;
+    });
+    if (extras.isEmpty) return;
+    state = state.copyWith(orders: [...extras, ...state.orders]);
   }
 
   void payProduct(String orderId, String method) {

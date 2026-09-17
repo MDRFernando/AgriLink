@@ -6,7 +6,6 @@ import 'package:my_app/core/widgets/cards.dart';
 import 'package:my_app/core/widgets/common_widgets.dart';
 import 'package:my_app/shared/entities/enums.dart';
 import 'package:my_app/shared/entities/models.dart';
-import 'package:my_app/shared/logic/bidding_logic.dart';
 import 'package:my_app/shared/providers/app_providers.dart';
 import 'package:my_app/shared/providers/logistics_provider.dart';
 
@@ -23,38 +22,74 @@ class BusinessProductionDetailScreen extends ConsumerStatefulWidget {
 class _BusinessProductionDetailScreenState
     extends ConsumerState<BusinessProductionDetailScreen> {
   final _bidController = TextEditingController();
+  final _quantityController = TextEditingController();
+  bool _submitting = false;
+  bool _loadingListing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadListing());
+  }
+
+  Future<void> _loadListing() async {
+    final existing =
+        ref.read(appDataProvider.notifier).getProduction(widget.productionId);
+    if (existing == null) {
+      setState(() => _loadingListing = true);
+    }
+    await ref
+        .read(appDataProvider.notifier)
+        .refreshListingAndBuyerBids(widget.productionId);
+    if (!mounted) return;
+    setState(() => _loadingListing = false);
+  }
 
   @override
   void dispose() {
     _bidController.dispose();
+    _quantityController.dispose();
     super.dispose();
+  }
+
+  Production? _listing() {
+    for (final production in ref.watch(appDataProvider).productions) {
+      if (production.id == widget.productionId) return production;
+    }
+    return null;
   }
 
   @override
   Widget build(BuildContext context) {
-    final production =
-        ref.watch(appDataProvider.notifier).getProduction(widget.productionId);
-    final history = ref.watch(listingBidsProvider(widget.productionId));
-    final lkr = NumberFormat.currency(symbol: 'LKR ', decimalDigits: 0);
+    final production = _listing();
+    final myBids = ref.watch(buyerListingBidsProvider(widget.productionId));
+    final profile = ref.watch(authProvider).profile;
+    final lkr = NumberFormat.currency(symbol: 'Rs. ', decimalDigits: 0);
 
     if (production == null) {
       return Scaffold(
         appBar: AppBar(title: const Text('Listing')),
-        body: const EmptyStateView(
-          icon: Icons.error_outline,
-          title: 'Listing not found',
-          message: 'This listing may no longer be available.',
-        ),
+        body: _loadingListing
+            ? const Center(child: CircularProgressIndicator())
+            : const EmptyStateView(
+                icon: Icons.error_outline,
+                title: 'Listing not found',
+                message: 'This listing may no longer be available.',
+              ),
       );
     }
 
-    final minNext = BidEngine.minimumAcceptable(
-      currentHighestBid: production.currentHighestBid,
-      minIncrement: production.minIncrement,
-    );
+    final isBuyer = profile?.role == UserRole.business;
     final windowOpen = production.auctionStatus == ListingAuctionStatus.open &&
+        production.quantity > 0 &&
+        (production.status == ProductionStatus.available ||
+            production.status == ProductionStatus.readyForHarvest) &&
         (production.biddingWindowEnd == null ||
             DateTime.now().isBefore(production.biddingWindowEnd!));
+    final canPlaceBid = isBuyer && windowOpen && profile != null;
+    final quantity = double.tryParse(_quantityController.text.trim()) ?? 0;
+    final amount = double.tryParse(_bidController.text.trim()) ?? 0;
+    final total = quantity > 0 && amount > 0 ? quantity * amount : 0.0;
 
     return Scaffold(
       appBar: AppBar(title: Text(production.cropType)),
@@ -65,6 +100,30 @@ class _BusinessProductionDetailScreenState
           children: [
             ProductionCard(production: production),
             const SizedBox(height: 24),
+            const SectionHeader(title: 'Listing details'),
+            const SizedBox(height: 12),
+            _DetailRow(label: 'Crop', value: production.cropType),
+            _DetailRow(label: 'Farmer', value: production.farmerName),
+            _DetailRow(
+              label: 'Available quantity',
+              value: '${production.quantity.toStringAsFixed(0)} ${production.unit}',
+            ),
+            _DetailRow(
+              label: 'Starting price',
+              value: '${lkr.format(production.reservePrice)}/${production.unit}',
+            ),
+            _DetailRow(
+              label: 'Location',
+              value: '${production.location}, ${production.region}',
+            ),
+            _DetailRow(
+              label: 'Bid closing',
+              value: production.biddingWindowEnd == null
+                  ? 'When the listing is closed'
+                  : DateFormat('MMM d, yyyy HH:mm')
+                      .format(production.biddingWindowEnd!),
+            ),
+            const SizedBox(height: 24),
             Text(
               'Place a bid',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -73,97 +132,168 @@ class _BusinessProductionDetailScreenState
             ),
             const SizedBox(height: 8),
             Text(
-              windowOpen
-                  ? 'Increment floor ${lkr.format(minNext)}/kg; reserve ${lkr.format(production.reservePrice)}/kg. Window ends '
-                      '${production.biddingWindowEnd == null ? 'when closed' : DateFormat('MMM d, HH:mm').format(production.biddingWindowEnd!)}.'
-                  : 'Bidding is closed on this listing.',
+              canPlaceBid
+                  ? 'Enter the quantity you want and your price per ${production.unit}. The farmer will review your offer.'
+                  : _closedReason(production, isBuyer),
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: AppColors.textSecondary,
                   ),
             ),
-            const SizedBox(height: 16),
-            AppTextField(
-              label: 'Your bid (LKR / kg)',
-              controller: _bidController,
-              keyboardType: TextInputType.number,
-              prefixIcon: Icons.gavel,
-              hint: minNext.toStringAsFixed(0),
-            ),
-            const SizedBox(height: 16),
-            AppButton(
-              label: 'Submit bid',
-              icon: Icons.send,
-              onPressed: windowOpen ? () => _submit(production) : null,
-            ),
-            const SizedBox(height: 24),
-            const SectionHeader(title: 'Bid history'),
-            const SizedBox(height: 12),
-            if (history.isEmpty)
-              const Text('No bids yet. Be the first at or above the reserve.')
-            else
-              ...history.map(
-                (b) => ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(b.buyerName),
-                  subtitle: Text(DateFormat('MMM d, HH:mm').format(b.createdAt)),
-                  trailing: Text(
-                    '${lkr.format(b.amount)}/kg',
-                    style: const TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                ),
+            if (canPlaceBid) ...[
+              const SizedBox(height: 16),
+              AppTextField(
+                label: 'Quantity',
+                controller: _quantityController,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                prefixIcon: Icons.scale,
+                hint: 'Enter quantity',
+                onChanged: (_) => setState(() {}),
               ),
+              const SizedBox(height: 16),
+              AppTextField(
+                label: 'Bid Price Per Unit',
+                controller: _bidController,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                prefixIcon: Icons.gavel,
+                hint: 'Enter bid price',
+                onChanged: (_) => setState(() {}),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Total Bid Value',
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                total > 0 ? lkr.format(total) : 'Rs. 0',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.primary,
+                    ),
+              ),
+              const SizedBox(height: 16),
+              AppButton(
+                label: 'Place Bid',
+                icon: Icons.send,
+                isLoading: _submitting,
+                onPressed: _submitting ? null : () => _submit(production),
+              ),
+            ],
             const SizedBox(height: 24),
-            const SectionHeader(title: 'Supply details'),
+            const SectionHeader(title: 'Your bids'),
             const SizedBox(height: 12),
-            _DetailRow(label: 'Farmer', value: production.farmerName),
-            _DetailRow(label: 'Grade', value: production.qualityGrade.label),
-            _DetailRow(
-              label: 'Available',
-              value: '${production.quantity} ${production.unit}',
-            ),
-            _DetailRow(
-              label: 'Reserve',
-              value: '${lkr.format(production.reservePrice)}/kg',
-            ),
-            _DetailRow(
-              label: 'Harvest',
-              value: DateFormat('MMMM d, yyyy').format(production.harvestDate),
-            ),
-            _DetailRow(
-              label: 'Location',
-              value: '${production.location}, ${production.region}',
-            ),
-            if (production.notes != null)
-              _DetailRow(label: 'Notes', value: production.notes!),
+            if (myBids.isEmpty)
+              const Text('You have not placed a bid on this listing yet.')
+            else
+              ...myBids.map((b) => _BuyerBidTile(bid: b, lkr: lkr)),
           ],
         ),
       ),
     );
   }
 
-  void _submit(Production production) {
+  String _closedReason(Production production, bool isBuyer) {
+    if (!isBuyer) {
+      return 'Only buyers can place bids on listings.';
+    }
+    if (production.status == ProductionStatus.sold ||
+        production.auctionStatus == ListingAuctionStatus.sold) {
+      return 'This listing has been sold and is no longer open for bidding.';
+    }
+    if (production.status == ProductionStatus.expired ||
+        production.auctionStatus == ListingAuctionStatus.expiredNoSale) {
+      return 'This listing has expired and is no longer open for bidding.';
+    }
+    if (production.quantity <= 0) {
+      return 'No remaining quantity is available.';
+    }
+    if (production.biddingWindowEnd != null &&
+        DateTime.now().isAfter(production.biddingWindowEnd!)) {
+      return 'The bidding window has closed.';
+    }
+    return 'Bidding is closed on this listing.';
+  }
+
+  Future<void> _submit(Production production) async {
+    final quantity = double.tryParse(_quantityController.text.trim());
     final amount = double.tryParse(_bidController.text.trim());
+    if (quantity == null || quantity <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter a quantity greater than zero')),
+      );
+      return;
+    }
     if (amount == null || amount <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enter a bid amount')),
+        const SnackBar(content: Text('Enter a valid bid price')),
+      );
+      return;
+    }
+    if (quantity > production.quantity) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Quantity exceeds available stock')),
       );
       return;
     }
     final profile = ref.read(authProvider).profile;
-    if (profile == null) return;
-    final error = ref.read(appDataProvider.notifier).placeBid(
+    if (profile == null || profile.role != UserRole.business) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Sign in as a buyer to place a bid')),
+      );
+      return;
+    }
+
+    setState(() => _submitting = true);
+    final error = await ref.read(appDataProvider.notifier).placeBid(
           listing: production,
           buyer: profile,
           amount: amount,
+          quantity: quantity,
           notify: ref.read(logisticsProvider.notifier).notify,
         );
+    if (!mounted) return;
+    setState(() => _submitting = false);
     if (error != null) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
       return;
     }
     _bidController.clear();
+    _quantityController.clear();
+    setState(() {});
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Bid placed. The farmer and other bidders will be notified.')),
+      const SnackBar(content: Text('Bid placed successfully. The farmer will review your offer.')),
+    );
+  }
+}
+
+class _BuyerBidTile extends StatelessWidget {
+  const _BuyerBidTile({required this.bid, required this.lkr});
+
+  final MarketBid bid;
+  final NumberFormat lkr;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: ListTile(
+        title: Text(bid.cropType, style: const TextStyle(fontWeight: FontWeight.w700)),
+        subtitle: Text(
+          '${bid.quantity.toStringAsFixed(0)} ${bid.unit}\n'
+          '${lkr.format(bid.amount)}/${bid.unit}  ·  Total: ${lkr.format(bid.totalAmount)}',
+        ),
+        isThreeLine: true,
+        trailing: StatusChip(
+          label: bid.status.label,
+          color: switch (bid.status) {
+            BidStatus.pending => AppColors.accent,
+            BidStatus.accepted => AppColors.success,
+            BidStatus.declined => AppColors.error,
+            BidStatus.expired => AppColors.textSecondary,
+          },
+        ),
+      ),
     );
   }
 }
@@ -182,7 +312,7 @@ class _DetailRow extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 120,
+            width: 140,
             child: Text(label, style: const TextStyle(color: AppColors.textSecondary)),
           ),
           Expanded(

@@ -120,13 +120,21 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
-    await Future.delayed(const Duration(milliseconds: 800));
-
-    ref.read(authProvider.notifier).login(
+    final error = await ref.read(authProvider.notifier).signIn(
           email: _emailController.text.trim(),
+          password: _passwordController.text,
           name: _nameController.text.trim(),
+          register: true,
         );
-
+    if (!mounted) return;
+    if (error != null) {
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
+      return;
+    }
+    await ref.read(appDataProvider.notifier).syncFromApi(
+          ref.read(authProvider).profile?.role,
+        );
     if (!mounted) return;
     setState(() => _isLoading = false);
 
