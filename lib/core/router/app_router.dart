@@ -14,6 +14,7 @@ import 'package:my_app/features/business/screens/marketplace_screen.dart';
 import 'package:my_app/features/farmer/screens/add_production_screen.dart';
 import 'package:my_app/features/farmer/screens/crop_plan_form_screen.dart';
 import 'package:my_app/features/farmer/screens/crop_plan_list_screen.dart';
+import 'package:my_app/features/chat/screens/farmer_chat_screen.dart';
 import 'package:my_app/features/farmer/screens/farmer_demand_screen.dart';
 import 'package:my_app/features/farmer/screens/farmer_production_detail_screen.dart';
 import 'package:my_app/features/farmer/screens/farmer_shell.dart';
@@ -117,6 +118,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.farmerDemand,
         builder: (context, state) => const FarmerDemandScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.farmerChat,
+        builder: (context, state) => const FarmerChatScreen(),
       ),
       GoRoute(
         path: AppRoutes.businessHome,

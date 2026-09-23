@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { AuthModule } from './auth/auth.module';
+import { ChatModule } from './chat/chat.module';
 import { CropPlansModule } from './crop-plans/crop-plans.module';
 import { DemandsModule } from './demands/demands.module';
 import { InterestsModule } from './interests/interests.module';
@@ -18,6 +19,7 @@ import { ReferenceModule } from './reference/reference.module';
     PrismaModule,
     NotificationsModule,
     AuthModule,
+    ChatModule,
     ProductionsModule,
     CropPlansModule,
     DemandsModule,

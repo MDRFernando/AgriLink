@@ -12,6 +12,7 @@ abstract final class AppRoutes {
   static const farmerCropPlanNew = '/farmer/crop-plans/new';
   static const farmerCropPlanDetail = '/farmer/crop-plans/:id';
   static const farmerDemand = '/farmer/demand';
+  static const farmerChat = '/farmer/chat';
   static const farmerOrderDetail = '/farmer/orders/:id';
 
   static const businessHome = '/business';

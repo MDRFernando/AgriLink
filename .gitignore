@@ -66,6 +66,7 @@ backend/prisma/dev.db
 .env.*
 !.env.example
 !.backend/.env.example
+lib/core/config/gemini_local_key.dart
 *.pem
 *.p12
 google-services.json

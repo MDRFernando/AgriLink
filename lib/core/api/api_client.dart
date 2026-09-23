@@ -133,6 +133,20 @@ class AgriLinkApi {
     return _asList(data).map((item) => mapOrder(item as Map<String, dynamic>)).toList();
   }
 
+  Future<String> farmerChat({
+    required List<Map<String, String>> messages,
+    required String userText,
+  }) async {
+    final data = await _post('/chat/farmer', {
+      'messages': messages,
+      'userText': userText,
+    });
+    if (data is Map && data['text'] is String && (data['text'] as String).trim().isNotEmpty) {
+      return data['text'] as String;
+    }
+    throw AgriLinkApiException('AgriLink chat did not return a reply.');
+  }
+
   UserProfile _authProfile(dynamic data) {
     final map = data as Map<String, dynamic>;
     token = map['accessToken'] as String?;

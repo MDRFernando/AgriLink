@@ -460,6 +460,7 @@
 					"@executable_path/Frameworks",
 				);
 				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 9QTBXVMUBB;
 				PRODUCT_BUNDLE_IDENTIFIER = com.agrilink.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OBJC_BRIDGING_HEADER = "Runner/Runner-Bridging-Header.h";
@@ -643,6 +644,7 @@
 					"@executable_path/Frameworks",
 				);
 				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 9QTBXVMUBB;
 				PRODUCT_BUNDLE_IDENTIFIER = com.agrilink.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OBJC_BRIDGING_HEADER = "Runner/Runner-Bridging-Header.h";
@@ -666,6 +668,7 @@
 					"@executable_path/Frameworks",
 				);
 				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 9QTBXVMUBB;
 				PRODUCT_BUNDLE_IDENTIFIER = com.agrilink.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OBJC_BRIDGING_HEADER = "Runner/Runner-Bridging-Header.h";

@@ -40,6 +40,13 @@ class _FarmerShellState extends ConsumerState<FarmerShell> {
   Widget build(BuildContext context) {
     return RoleScaffold(
       title: 'Farmer Dashboard',
+      actions: [
+        IconButton(
+          tooltip: 'Ask AgriLink',
+          onPressed: () => context.push(AppRoutes.farmerChat),
+          icon: const Icon(Icons.forum_outlined),
+        ),
+      ],
       floatingActionButton: _index == 0
           ? FloatingActionButton.extended(
               onPressed: () => context.push(AppRoutes.farmerAddProduction),
@@ -140,6 +147,22 @@ class _FarmerOverviewTab extends ConsumerWidget {
               ),
               trailing: const Icon(Icons.chevron_right),
               onTap: () => context.push(AppRoutes.farmerCropPlans),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Card(
+            child: ListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              leading: const Icon(Icons.forum_outlined, color: AppColors.farmer),
+              title: const Text(
+                'Ask AgriLink',
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
+              subtitle: const Text(
+                'General how-to for listings, bids, crop plans, demand, and orders. No personal farm data is used.',
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.push(AppRoutes.farmerChat),
             ),
           ),
           const SizedBox(height: 24),
