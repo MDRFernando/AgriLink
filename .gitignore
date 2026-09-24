@@ -62,9 +62,9 @@ backend/*.db-journal
 backend/prisma/dev.db
 
 # Secrets and local env
-.env
-.env.*
-!.env.example
+# .env
+# .env.*
+# !.env.example
 !.backend/.env.example
 lib/core/config/gemini_local_key.dart
 *.pem
