@@ -21,11 +21,13 @@ import { StatCard } from '../common/StatCard';
 import { StatusBadge, Badge } from '../common/Badge';
 import { ActionModal } from '../common/ActionModal';
 import { EmptyState } from '../common/EmptyState';
-import {
-  MOCK_TRANSPORT_JOBS,
-  MOCK_FLEET
-} from '@/lib/mockData';
 import { TransportJob, TransportStatus, Vehicle, VehicleType } from '@/lib/types';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  getTransporterDataAction,
+  updateTransportStatusAction,
+  createVehicleAction,
+} from '@/app/actions/transporterActions';
 
 interface TransporterViewProps {
   activeTab: string;
@@ -42,8 +44,16 @@ const STATUS_STEPS: TransportStatus[] = [
 ];
 
 export function TransporterView({ activeTab, searchQuery }: TransporterViewProps) {
-  const [jobs, setJobs] = useState<TransportJob[]>(MOCK_TRANSPORT_JOBS);
-  const [fleet, setFleet] = useState<Vehicle[]>(MOCK_FLEET);
+  const queryClient = useQueryClient();
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['transporterData'],
+    queryFn: () => getTransporterDataAction(),
+  });
+
+  const jobs = data?.jobs || [];
+  const fleet = data?.fleet || [];
+
   const [recentAcceptanceMsg, setRecentAcceptanceMsg] = useState<string | null>(null);
 
   // New Vehicle Modal State
@@ -52,6 +62,31 @@ export function TransporterView({ activeTab, searchQuery }: TransporterViewProps
   const [newType, setNewType] = useState<VehicleType>('small_lorry');
   const [newCapacity, setNewCapacity] = useState(3000);
   const [newDriver, setNewDriver] = useState('Ananda Kumara');
+
+  const updateStatusMutation = useMutation({
+    mutationFn: ({
+      jobId,
+      status,
+      driverName,
+      vehicleNumber,
+    }: {
+      jobId: string;
+      status: TransportStatus;
+      driverName?: string;
+      vehicleNumber?: string;
+    }) => updateTransportStatusAction(jobId, status, driverName, vehicleNumber),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['transporterData'] });
+    },
+  });
+
+  const createVehicleMutation = useMutation({
+    mutationFn: createVehicleAction,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['transporterData'] });
+      setIsNewVehicleModalOpen(false);
+    },
+  });
 
   const filteredJobs = jobs.filter((j) => {
     return (
@@ -64,55 +99,40 @@ export function TransporterView({ activeTab, searchQuery }: TransporterViewProps
   });
 
   const activeFleetCount = fleet.filter((v) => v.status !== 'maintenance').length;
-  const deploymentRatio = Math.round((activeFleetCount / fleet.length) * 100);
+  const deploymentRatio = fleet.length > 0 ? Math.round((activeFleetCount / fleet.length) * 100) : 100;
 
   const handleAcceptJob = (jobId: string) => {
-    setJobs((prev) =>
-      prev.map((j) =>
-        j.id === jobId
-          ? {
-              ...j,
-              status: 'assigned',
-              driverName: 'Ranga Fernando',
-              vehicleNumber: 'NC-PD-5590',
-              otpCode: '5519',
-              updatedAt: 'Just now'
-            }
-          : j
-      )
-    );
-    setRecentAcceptanceMsg('Freight Job Accepted! Assigned to Vehicle NC-PD-5590 and Driver Ranga Fernando.');
+    const assignedVeh = fleet.find((v) => v.status === 'active') || fleet[0];
+    const driver = assignedVeh?.currentDriver || 'Carrier Driver';
+    const plate = assignedVeh?.vehicleNumber || 'WP-LC-4421';
+
+    updateStatusMutation.mutate({
+      jobId,
+      status: 'assigned',
+      driverName: driver,
+      vehicleNumber: plate,
+    });
+    setRecentAcceptanceMsg(`Freight Job Accepted! Assigned to Vehicle ${plate} and Driver ${driver}.`);
     setTimeout(() => setRecentAcceptanceMsg(null), 6000);
   };
 
   const handleAdvanceStatus = (jobId: string) => {
-    setJobs((prev) =>
-      prev.map((j) => {
-        if (j.id !== jobId) return j;
-        const currentIndex = STATUS_STEPS.indexOf(j.status);
-        if (currentIndex < STATUS_STEPS.length - 1) {
-          const nextStatus = STATUS_STEPS[currentIndex + 1];
-          return { ...j, status: nextStatus, updatedAt: 'Just now' };
-        }
-        return j;
-      })
-    );
+    const j = jobs.find((x) => x.id === jobId);
+    if (!j) return;
+    const currentIndex = STATUS_STEPS.indexOf(j.status);
+    if (currentIndex < STATUS_STEPS.length - 1) {
+      const nextStatus = STATUS_STEPS[currentIndex + 1];
+      updateStatusMutation.mutate({ jobId, status: nextStatus });
+    }
   };
 
-  const handleCreateVehicle = (e: React.FormEvent) => {
+  const handleCreateVehicle = async (e: React.FormEvent) => {
     e.preventDefault();
-    const newVeh: Vehicle = {
-      id: `veh-${Date.now()}`,
+    await createVehicleMutation.mutateAsync({
       vehicleNumber: newPlate,
       vehicleType: newType,
       capacityKg: Number(newCapacity),
-      status: 'active',
-      currentDriver: newDriver,
-      fuelEfficiencyKmPerL: 8.2
-    };
-
-    setFleet([...fleet, newVeh]);
-    setIsNewVehicleModalOpen(false);
+    });
   };
 
   return (
@@ -125,7 +145,7 @@ export function TransporterView({ activeTab, searchQuery }: TransporterViewProps
             <span>/</span>
             <span className="font-semibold text-emerald-700 dark:text-emerald-400">Logistics & Fleet</span>
             <span>•</span>
-            <span>Rajarata Express Logistics (PVT) Ltd</span>
+            <span>Carrier Freight Desk</span>
           </div>
           <h1 className="mt-1 text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 sm:text-3xl">
             Agricultural Transport Dispatch

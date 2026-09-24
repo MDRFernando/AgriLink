@@ -17,60 +17,18 @@ import {
   Users,
   Compass,
   X,
-  Store,
-  Building2,
-  Circle,
+  LogOut,
 } from 'lucide-react';
 import { UserRole } from '@/lib/types';
+import { logoutAction } from '@/app/actions/authActions';
 
 interface SidebarProps {
   currentRole: UserRole;
-  onRoleChange: (role: UserRole) => void;
   activeTab: string;
   onTabChange: (tab: string) => void;
   mobileMenuOpen: boolean;
   setMobileMenuOpen: (open: boolean) => void;
 }
-
-const PERSONAS: Record<
-  UserRole,
-  {
-    name: string;
-    title: string;
-    location: string;
-    roleLabel: string;
-    icon: React.ComponentType<{ className?: string }>;
-  }
-> = {
-  farmer: {
-    name: 'Sunil Bandara',
-    title: 'Smallholder Farmer',
-    location: 'Eppawala, Anuradhapura',
-    roleLabel: 'Producer',
-    icon: Sprout,
-  },
-  buyer: {
-    name: 'Keells Food Products PLC',
-    title: 'Institutional Wholesale',
-    location: 'Colombo Central Hub',
-    roleLabel: 'Verified Buyer',
-    icon: Store,
-  },
-  transporter: {
-    name: 'Rajarata Express Logistics',
-    title: 'Fleet Carrier (4 Units)',
-    location: 'Anuradhapura Hub',
-    roleLabel: 'Transporter',
-    icon: Truck,
-  },
-  government: {
-    name: 'Dept of Agriculture',
-    title: 'Agrarian Development',
-    location: 'National Intelligence Desk',
-    roleLabel: 'Govt Admin',
-    icon: Building2,
-  },
-};
 
 const NAV_ITEMS: Record<
   UserRole,
@@ -78,33 +36,32 @@ const NAV_ITEMS: Record<
     id: string;
     label: string;
     icon: React.ComponentType<{ className?: string }>;
-    badge?: string;
   }[]
 > = {
   farmer: [
     { id: 'overview', label: 'Farm Overview', icon: LayoutDashboard },
-    { id: 'listings', label: 'Produce Listings', icon: Sprout, badge: '6' },
-    { id: 'auctions', label: 'Live Auctions', icon: Gavel, badge: '5' },
+    { id: 'listings', label: 'Produce Listings', icon: Sprout },
+    { id: 'auctions', label: 'Live Auctions', icon: Gavel },
     { id: 'crop_plans', label: 'Crop Plans', icon: CalendarDays },
     { id: 'calculator', label: 'Income Calculator', icon: Calculator },
   ],
   buyer: [
     { id: 'overview', label: 'Procurement Hub', icon: LayoutDashboard },
-    { id: 'marketplace', label: 'Marketplace', icon: ShoppingBag, badge: '6' },
-    { id: 'demands', label: 'Sourcing Demands', icon: FileSpreadsheet, badge: '4' },
-    { id: 'orders', label: 'Orders & Tracking', icon: Boxes, badge: '2' },
+    { id: 'marketplace', label: 'Marketplace', icon: ShoppingBag },
+    { id: 'demands', label: 'Sourcing Demands', icon: FileSpreadsheet },
+    { id: 'orders', label: 'Orders & Tracking', icon: Boxes },
   ],
   transporter: [
     { id: 'overview', label: 'Dispatch Centre', icon: LayoutDashboard },
-    { id: 'available_jobs', label: 'Freight Jobs', icon: Compass, badge: '2' },
-    { id: 'active_trips', label: 'Active Trips', icon: Truck, badge: '2' },
-    { id: 'fleet', label: 'Fleet & Drivers', icon: Users, badge: '4' },
+    { id: 'available_jobs', label: 'Freight Jobs', icon: Compass },
+    { id: 'active_trips', label: 'Active Trips', icon: Truck },
+    { id: 'fleet', label: 'Fleet & Drivers', icon: Users },
   ],
   government: [
     { id: 'overview', label: 'National Overview', icon: LayoutDashboard },
     { id: 'supply_map', label: 'Supply & Demand', icon: MapPin },
     { id: 'market_prices', label: 'Price Intelligence', icon: TrendingUp },
-    { id: 'verifications', label: 'KYC Desk', icon: ShieldCheck, badge: '2' },
+    { id: 'verifications', label: 'KYC Desk', icon: ShieldCheck },
   ],
 };
 
@@ -115,8 +72,6 @@ export function Sidebar({
   mobileMenuOpen,
   setMobileMenuOpen,
 }: SidebarProps) {
-  const persona = PERSONAS[currentRole];
-  const PersonaIcon = persona.icon;
   const navItems = NAV_ITEMS[currentRole] || [];
 
   const handleSelectTab = (id: string) => {
@@ -145,33 +100,12 @@ export function Sidebar({
         </button>
       </div>
 
-      {/* Persona card */}
-      <div className="rounded-lg bg-zinc-900 p-3 dark:bg-zinc-800">
-        <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-emerald-600 text-white">
-            <PersonaIcon className="h-4.5 w-4.5" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-[13px] font-semibold leading-tight text-white">
-              {persona.name}
-            </p>
-            <p className="truncate text-[11px] leading-tight text-zinc-400">
-              {persona.title}
-            </p>
-          </div>
-        </div>
-        <div className="mt-2.5 flex items-center gap-1.5 text-[10px] text-zinc-500">
-          <MapPin className="h-3 w-3 shrink-0 text-zinc-500" />
-          <span className="truncate">{persona.location}</span>
-        </div>
-      </div>
-
       {/* Navigation */}
-      <div className="mt-6 flex-1">
-        <p className="mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
+      <div className="flex-1">
+        <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
           Navigation
         </p>
-        <nav className="space-y-0.5">
+        <nav className="space-y-1">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
@@ -199,43 +133,22 @@ export function Sidebar({
                   }`}
                 />
                 <span className="flex-1 truncate text-left">{item.label}</span>
-
-                {item.badge && (
-                  <span
-                    className={`min-w-[18px] rounded-full px-1.5 py-px text-center text-[10px] font-semibold tabular-nums ${
-                      isActive
-                        ? 'bg-emerald-600 text-white dark:bg-emerald-500'
-                        : 'bg-zinc-200 text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300'
-                    }`}
-                  >
-                    {item.badge}
-                  </span>
-                )}
               </button>
             );
           })}
         </nav>
       </div>
 
-      {/* Footer status */}
+      {/* Footer / Logout */}
       <div className="mt-auto border-t border-zinc-100 pt-4 dark:border-zinc-800">
-        <div className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
-          <div className="flex items-center gap-2">
-            <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
-            </span>
-            <span className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
-              Maha 2026 Season
-            </span>
-            <span className="ml-auto rounded bg-emerald-50 px-1.5 py-px text-[10px] font-semibold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400">
-              Live
-            </span>
-          </div>
-          <p className="mt-1.5 text-[11px] leading-relaxed text-zinc-500 dark:text-zinc-400">
-            Direct price discovery active. In-memory demo sandbox.
-          </p>
-        </div>
+        <button
+          type="button"
+          onClick={() => logoutAction()}
+          className="flex w-full items-center justify-center gap-2 rounded-lg border border-zinc-200 py-2.5 text-xs font-medium text-zinc-600 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600 dark:border-zinc-800 dark:text-zinc-400 dark:hover:border-red-900 dark:hover:bg-red-950/40 dark:hover:text-red-400"
+        >
+          <LogOut className="h-4 w-4" />
+          <span>Sign Out</span>
+        </button>
       </div>
     </div>
   );

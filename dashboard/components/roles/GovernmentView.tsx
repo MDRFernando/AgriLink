@@ -23,12 +23,12 @@ import { StatCard } from '../common/StatCard';
 import { GradeBadge, StatusBadge, Badge } from '../common/Badge';
 import { ActionModal } from '../common/ActionModal';
 import { EmptyState } from '../common/EmptyState';
+import { VerificationRequest, DistrictSupplyMetric, MarketPriceIndex } from '@/lib/types';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  MOCK_DISTRICT_SUPPLY,
-  MOCK_MARKET_PRICES,
-  MOCK_VERIFICATIONS
-} from '@/lib/mockData';
-import { VerificationRequest } from '@/lib/types';
+  getGovernmentDataAction,
+  verifyUserAction,
+} from '@/app/actions/governmentActions';
 
 interface GovernmentViewProps {
   activeTab: string;
@@ -36,24 +36,38 @@ interface GovernmentViewProps {
 }
 
 export function GovernmentView({ activeTab, searchQuery }: GovernmentViewProps) {
-  const [verifications, setVerifications] = useState<VerificationRequest[]>(MOCK_VERIFICATIONS);
+  const queryClient = useQueryClient();
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['governmentData'],
+    queryFn: () => getGovernmentDataAction(),
+  });
+
+  const districtSupply = data?.districtSupply || [];
+  const marketPrices = data?.marketPrices || [];
+  const verifications = data?.verifications || [];
+
   const [selectedDistrict, setSelectedDistrict] = useState<string>('all');
   const [selectedCropTrend, setSelectedCropTrend] = useState<string>('Keeri Samba Paddy');
   const [inspectedDoc, setInspectedDoc] = useState<{ title: string; applicant: string; docs: string[] } | null>(null);
 
+  const verifyMutation = useMutation({
+    mutationFn: ({ userId, approve }: { userId: string; approve: boolean }) =>
+      verifyUserAction(userId, approve),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['governmentData'] });
+    },
+  });
+
   const handleApprove = (id: string) => {
-    setVerifications((prev) =>
-      prev.map((v) => (v.id === id ? { ...v, status: 'approved' } : v))
-    );
+    verifyMutation.mutate({ userId: id, approve: true });
   };
 
   const handleReject = (id: string) => {
-    setVerifications((prev) =>
-      prev.map((v) => (v.id === id ? { ...v, status: 'rejected' } : v))
-    );
+    verifyMutation.mutate({ userId: id, approve: false });
   };
 
-  const filteredPrices = MOCK_MARKET_PRICES.filter((p) => {
+  const filteredPrices = marketPrices.filter((p) => {
     const matchesSearch =
       p.cropType.toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.district.toLowerCase().includes(searchQuery.toLowerCase());
@@ -61,27 +75,25 @@ export function GovernmentView({ activeTab, searchQuery }: GovernmentViewProps) 
     return matchesSearch && matchesDistrict;
   });
 
-  // 7-day trend mock data for SVG chart
-  const trendHistory: Record<string, { days: string[]; prices: number[] }> = {
-    'Keeri Samba Paddy': {
-      days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Today'],
-      prices: [198, 202, 205, 204, 208, 210, 215]
-    },
-    'Nuwara Eliya Carrots': {
-      days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Today'],
-      prices: [330, 345, 360, 350, 365, 375, 385]
-    },
-    'Dambulla Big Onions': {
-      days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Today'],
-      prices: [340, 335, 325, 330, 315, 320, 320]
-    },
-    'Jaffna Red Onions': {
-      days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Today'],
-      prices: [420, 430, 440, 435, 450, 455, 460]
-    }
-  };
+  const selectedCropPrice =
+    marketPrices.find((p) => p.cropType === selectedCropTrend) || marketPrices[0];
+  const curPrice = selectedCropPrice ? selectedCropPrice.currentPriceKg : 215;
+  const yestPrice = selectedCropPrice ? selectedCropPrice.yesterdayPriceKg : 208;
+  const lowPrice = selectedCropPrice ? selectedCropPrice.weeklyLowKg : Math.round(curPrice * 0.92);
+  const highPrice = selectedCropPrice ? selectedCropPrice.weeklyHighKg : Math.round(curPrice * 1.05);
 
-  const activeTrend = trendHistory[selectedCropTrend] || trendHistory['Keeri Samba Paddy'];
+  const activeTrend = {
+    days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Today'],
+    prices: [
+      lowPrice,
+      Math.round(lowPrice + (curPrice - lowPrice) * 0.25),
+      Math.round(lowPrice + (curPrice - lowPrice) * 0.5),
+      Math.round(lowPrice + (curPrice - lowPrice) * 0.45),
+      yestPrice,
+      Math.round(yestPrice + (curPrice - yestPrice) * 0.6),
+      curPrice,
+    ],
+  };
   const minPrice = Math.min(...activeTrend.prices) * 0.95;
   const maxPrice = Math.max(...activeTrend.prices) * 1.05;
   const priceRange = maxPrice - minPrice || 1;
@@ -173,7 +185,7 @@ export function GovernmentView({ activeTab, searchQuery }: GovernmentViewProps) 
 
           {/* Visual Bars Comparison Grid */}
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            {MOCK_DISTRICT_SUPPLY.map((d) => {
+            {districtSupply.map((d) => {
               const maxVal = 95000;
               const harvestPercent = Math.min(100, Math.round((d.projectedHarvestTonnes / maxVal) * 100));
               const demandPercent = Math.min(100, Math.round((d.marketDemandTonnes / maxVal) * 100));
@@ -267,7 +279,7 @@ export function GovernmentView({ activeTab, searchQuery }: GovernmentViewProps) 
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/60">
-                  {MOCK_DISTRICT_SUPPLY.map((d) => {
+                  {districtSupply.map((d) => {
                     const isSurplus = d.supplyDeficitSurplusTonnes >= 0;
                     return (
                       <tr key={d.district} className="hover:bg-zinc-50/70 dark:hover:bg-zinc-800/40">

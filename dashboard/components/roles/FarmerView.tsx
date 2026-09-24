@@ -20,11 +20,14 @@ import { StatCard } from '../common/StatCard';
 import { GradeBadge, StatusBadge, Badge } from '../common/Badge';
 import { ActionModal } from '../common/ActionModal';
 import { EmptyState } from '../common/EmptyState';
-import {
-  MOCK_PRODUCTIONS,
-  MOCK_CROP_PLANS
-} from '@/lib/mockData';
 import { ProductionListing, QualityGrade } from '@/lib/types';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  getFarmerDataAction,
+  createProductionListingAction,
+  acceptBidAction,
+  createCropPlanAction,
+} from '@/app/actions/farmerActions';
 
 interface FarmerViewProps {
   activeTab: string;
@@ -32,7 +35,16 @@ interface FarmerViewProps {
 }
 
 export function FarmerView({ activeTab, searchQuery }: FarmerViewProps) {
-  const [productions, setProductions] = useState<ProductionListing[]>(MOCK_PRODUCTIONS);
+  const queryClient = useQueryClient();
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['farmerData'],
+    queryFn: () => getFarmerDataAction(),
+  });
+
+  const productions = data?.productions || [];
+  const cropPlans = data?.cropPlans || [];
+
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [acceptedBids, setAcceptedBids] = useState<Record<string, boolean>>({});
 
@@ -55,6 +67,22 @@ export function FarmerView({ activeTab, searchQuery }: FarmerViewProps) {
   const [calcTraditionalPrice, setCalcTraditionalPrice] = useState<number>(165);
   const [calcTransportRate, setCalcTransportRate] = useState<number>(12);
 
+  const createListingMutation = useMutation({
+    mutationFn: createProductionListingAction,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['farmerData'] });
+      setIsNewListingModalOpen(false);
+    },
+  });
+
+  const acceptBidMutation = useMutation({
+    mutationFn: (listingId: string) => acceptBidAction(listingId),
+    onSuccess: (_, listingId) => {
+      queryClient.invalidateQueries({ queryKey: ['farmerData'] });
+      setAcceptedBids((prev) => ({ ...prev, [listingId]: true }));
+    },
+  });
+
   const filteredProductions = productions.filter((p) => {
     const matchesSearch =
       p.cropType.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -69,42 +97,19 @@ export function FarmerView({ activeTab, searchQuery }: FarmerViewProps) {
   });
 
   const handleAcceptBid = (prodId: string) => {
-    setAcceptedBids((prev) => ({ ...prev, [prodId]: true }));
+    acceptBidMutation.mutate(prodId);
   };
 
-  const handleCreateListing = (e: React.FormEvent) => {
+  const handleCreateListing = async (e: React.FormEvent) => {
     e.preventDefault();
-    const newEntry: ProductionListing = {
-      id: `prod-${Date.now()}`,
-      listingCode: `LST-2026-${Math.floor(1000 + Math.random() * 9000)}`,
-      farmerName: 'Sunil Bandara',
-      farmerPhone: '+94 77 123 4567',
+    await createListingMutation.mutateAsync({
       cropType: newCropType,
       variety: newVariety,
-      category: newCategory,
       quantityKg: Number(newQuantity),
       qualityGrade: newGrade,
+      minPrice: Number(newPrice),
       harvestDate: newHarvestDate,
-      region: 'North Central',
-      district: 'Anuradhapura',
-      status: 'available',
-      minAcceptablePriceKg: Number(newPrice),
-      traditionalFarmgatePriceKg: Math.round(newPrice * 0.78),
-      projectedRevenue: Number(newQuantity) * Number(newPrice),
-      description: `Direct farmgate listing submitted by Sunil Bandara. Moisture controlled, graded ${newGrade}.`,
-      activeAuction: {
-        id: `auc-${Date.now()}`,
-        openingBid: Number(newPrice),
-        currentHighestBid: Number(newPrice),
-        bidCount: 1,
-        endsInMinutes: 180,
-        status: 'open',
-        highestBidderName: 'Initial Reserve Open'
-      }
-    };
-
-    setProductions([newEntry, ...productions]);
-    setIsNewListingModalOpen(false);
+    });
   };
 
   // Calculator computations
@@ -125,7 +130,7 @@ export function FarmerView({ activeTab, searchQuery }: FarmerViewProps) {
             <span>/</span>
             <span className="font-semibold text-emerald-700 dark:text-emerald-400">Farmer Operations</span>
             <span>•</span>
-            <span>Eppawala, Anuradhapura</span>
+            <span>Farmgate Operations Hub</span>
           </div>
           <h1 className="mt-1 text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 sm:text-3xl">
             Farmer Harvest & Auction Desk
@@ -419,7 +424,7 @@ export function FarmerView({ activeTab, searchQuery }: FarmerViewProps) {
           </div>
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            {MOCK_CROP_PLANS.map((plan) => (
+            {cropPlans.map((plan) => (
               <div
                 key={plan.id}
                 className="rounded-xl border border-zinc-200 bg-white p-5 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900"

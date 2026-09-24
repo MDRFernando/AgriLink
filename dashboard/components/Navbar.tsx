@@ -8,132 +8,73 @@ import {
   Building2,
   Bell,
   Search,
-  ChevronDown,
-  CheckCircle2,
   Menu,
   X,
-  ShieldCheck
+  ShieldCheck,
+  LogOut,
 } from 'lucide-react';
 import { UserRole } from '@/lib/types';
+import { logoutAction } from '@/app/actions/authActions';
+import { useQuery } from '@tanstack/react-query';
+import { getNotificationsAction } from '@/app/actions/notificationActions';
 
 interface NavbarProps {
   currentRole: UserRole;
-  onRoleChange: (role: UserRole) => void;
   searchQuery: string;
   onSearchChange: (q: string) => void;
   mobileMenuOpen: boolean;
   setMobileMenuOpen: (open: boolean) => void;
+  currentUser?: {
+    id: string;
+    email: string;
+    name?: string | null;
+    role: string;
+    organizationName?: string | null;
+    district?: string | null;
+    isVerified?: boolean;
+  } | null;
 }
 
-const ROLES: { id: UserRole; label: string; sub: string; icon: React.ComponentType<{ className?: string }> }[] = [
-  {
-    id: 'farmer',
+const ROLE_CONFIG: Record<
+  UserRole,
+  { label: string; icon: React.ComponentType<{ className?: string }> }
+> = {
+  farmer: {
     label: 'Farmer',
-    sub: 'Sunil Bandara (Anuradhapura)',
-    icon: Sprout
+    icon: Sprout,
   },
-  {
-    id: 'buyer',
+  buyer: {
     label: 'Wholesale Buyer',
-    sub: 'Keells Food Products (Colombo Hub)',
-    icon: Store
+    icon: Store,
   },
-  {
-    id: 'transporter',
+  transporter: {
     label: 'Logistics Operator',
-    sub: 'Rajarata Express (4 Units)',
-    icon: Truck
+    icon: Truck,
   },
-  {
-    id: 'government',
-    label: 'Govt / Admin Officer',
-    sub: 'Dept of Agriculture (National)',
-    icon: Building2
-  }
-];
+  government: {
+    label: 'Government / Admin',
+    icon: Building2,
+  },
+};
 
 export function Navbar({
   currentRole,
-  onRoleChange,
   searchQuery,
   onSearchChange,
   mobileMenuOpen,
   setMobileMenuOpen,
+  currentUser,
 }: NavbarProps) {
-  const [roleDropdownOpen, setRoleDropdownOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [mobileSearchVisible, setMobileSearchVisible] = useState(false);
 
-  const activeRoleConfig = ROLES.find((r) => r.id === currentRole) || ROLES[0];
+  const activeRoleConfig = ROLE_CONFIG[currentRole] || ROLE_CONFIG.farmer;
   const ActiveIcon = activeRoleConfig.icon;
 
-  const notificationsByRole: Record<UserRole, { title: string; desc: string; time: string }[]> = {
-    farmer: [
-      {
-        title: 'New Bid Placed: Rs. 215/kg',
-        desc: 'Araliya Rice Mills placed a new bid on Keeri Samba listing LST-2026-0891.',
-        time: '12m ago'
-      },
-      {
-        title: 'Weather Advisory: North Central',
-        desc: 'Inter-monsoonal showers expected in Anuradhapura over next 48h. Protect open drying yards.',
-        time: '1h ago'
-      },
-      {
-        title: 'Transport Confirmed',
-        desc: 'Vehicle WP-LC-4421 assigned for order ORD-2026-4401 pickup.',
-        time: '3h ago'
-      }
-    ],
-    buyer: [
-      {
-        title: 'Auction Closing in 18 mins',
-        desc: 'Nuwara Eliya Carrots (1,800kg) auction is nearing deadline. Current highest bid: Rs. 380/kg.',
-        time: '4m ago'
-      },
-      {
-        title: 'Consignment Dispatched',
-        desc: 'Order ORD-2026-4401 (Keeri Samba) is now in transit from Eppawala.',
-        time: '25m ago'
-      },
-      {
-        title: 'New Match for Your Carrot Demand',
-        desc: 'Farmer Dhammika Perera listed 1,800kg matching your procurement criteria.',
-        time: '2h ago'
-      }
-    ],
-    transporter: [
-      {
-        title: 'New Cargo Request: 650kg Chilies',
-        desc: 'Pickup in Thalawa, delivery to Peliyagoda Manning Market. Estimated payout: Rs. 29,800.',
-        time: 'Just now'
-      },
-      {
-        title: 'Delivery Confirmation Received',
-        desc: 'Buyer confirmed receipt for Job TRP-2026-092. Payment settlement queued.',
-        time: '2h ago'
-      }
-    ],
-    government: [
-      {
-        title: 'Tomato Supply Surplus in Dambulla',
-        desc: 'Production exceeds regional demand by 4,400 tonnes. Recommend inter-district price support.',
-        time: '30m ago'
-      },
-      {
-        title: 'New Buyer Verification Pending',
-        desc: 'Keells Food Products PLC submitted updated tax & BRN credentials.',
-        time: '1h ago'
-      },
-      {
-        title: 'Delivery Dispute Flagged',
-        desc: 'Dispute ORD-2026-4404 (Weather decay during loading) requires mediator assignment.',
-        time: '3h ago'
-      }
-    ]
-  };
-
-  const currentNotifs = notificationsByRole[currentRole] || [];
+  const { data: notifications = [] } = useQuery({
+    queryKey: ['notifications', currentRole],
+    queryFn: () => getNotificationsAction(currentRole),
+  });
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-zinc-200 bg-white/95 backdrop-blur-sm dark:border-zinc-800 dark:bg-zinc-900/95">
@@ -183,7 +124,7 @@ export function Navbar({
           </div>
         </div>
 
-        {/* Actions: Role Selector, Notifications, Profile */}
+        {/* Actions: Role Badge, Notifications, User Profile */}
         <div className="flex items-center gap-2 sm:gap-3">
           {/* Mobile Search Toggle */}
           <button
@@ -195,84 +136,10 @@ export function Navbar({
             <Search className="h-4 w-4" />
           </button>
 
-          {/* Role Switcher Pill Dropdown */}
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setRoleDropdownOpen(!roleDropdownOpen)}
-              className="flex items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-1.5 text-xs font-medium text-zinc-800 transition hover:bg-zinc-100 sm:px-3 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
-              aria-expanded={roleDropdownOpen}
-            >
-              <ActiveIcon className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-              <div className="text-left">
-                <span className="block font-semibold text-zinc-900 dark:text-zinc-100">
-                  {activeRoleConfig.label}
-                </span>
-                <span className="hidden text-[10px] text-zinc-500 xl:block dark:text-zinc-400">
-                  Role View
-                </span>
-              </div>
-              <ChevronDown className="h-3.5 w-3.5 text-zinc-400" />
-            </button>
-
-            {roleDropdownOpen && (
-              <>
-                <div
-                  className="fixed inset-0 z-20"
-                  onClick={() => setRoleDropdownOpen(false)}
-                />
-                <div className="absolute right-0 z-30 mt-2 w-72 origin-top-right rounded-xl border border-zinc-200 bg-white p-2 shadow-lg dark:border-zinc-800 dark:bg-zinc-900">
-                  <div className="px-3 py-1.5 text-[11px] font-semibold tracking-wider text-zinc-400 uppercase">
-                    Switch Active Role Persona
-                  </div>
-                  <div className="space-y-1">
-                    {ROLES.map((role) => {
-                      const RoleIcon = role.icon;
-                      const isSelected = currentRole === role.id;
-                      return (
-                        <button
-                          key={role.id}
-                          type="button"
-                          onClick={() => {
-                            onRoleChange(role.id);
-                            setRoleDropdownOpen(false);
-                          }}
-                          className={`flex w-full items-start gap-3 rounded-lg px-3 py-2 text-left transition ${
-                            isSelected
-                              ? 'bg-emerald-50 text-emerald-900 dark:bg-emerald-950/60 dark:text-emerald-200'
-                              : 'text-zinc-700 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800'
-                          }`}
-                        >
-                          <div
-                            className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md ${
-                              isSelected
-                                ? 'bg-emerald-600 text-white'
-                                : 'bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400'
-                            }`}
-                          >
-                            <RoleIcon className="h-4 w-4" />
-                          </div>
-                          <div className="flex-1">
-                            <div className="flex items-center justify-between">
-                              <p className="text-xs font-semibold">{role.label}</p>
-                              {isSelected && (
-                                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-                              )}
-                            </div>
-                            <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
-                              {role.sub}
-                            </p>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <div className="mt-2 border-t border-zinc-100 pt-2 px-3 pb-1 text-[11px] text-zinc-400 dark:border-zinc-800">
-                    ⚡ Demo Sandbox: In-memory mock data active
-                  </div>
-                </div>
-              </>
-            )}
+          {/* Active Role Indicator (Clean Badge - Role Changer Removed) */}
+          <div className="flex items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-1.5 text-xs font-semibold text-zinc-800 sm:px-3 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">
+            <ActiveIcon className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+            <span className="hidden sm:inline">{activeRoleConfig.label}</span>
           </div>
 
           {/* Notifications Popover */}
@@ -284,7 +151,9 @@ export function Navbar({
               aria-label="View notifications"
             >
               <Bell className="h-4 w-4" />
-              <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-emerald-600 ring-2 ring-white dark:ring-zinc-900" />
+              {notifications.length > 0 && (
+                <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-emerald-600 ring-2 ring-white dark:ring-zinc-900" />
+              )}
             </button>
 
             {notifOpen && (
@@ -293,14 +162,14 @@ export function Navbar({
                 <div className="absolute right-0 z-30 mt-2 w-80 origin-top-right rounded-xl border border-zinc-200 bg-white p-3 shadow-xl sm:w-96 dark:border-zinc-800 dark:bg-zinc-900">
                   <div className="flex items-center justify-between border-b border-zinc-100 pb-2 dark:border-zinc-800">
                     <h4 className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
-                      Live Role Alerts ({activeRoleConfig.label})
+                      Live Activity & Alerts
                     </h4>
                     <span className="text-[10px] text-emerald-600 font-medium">
-                      {currentNotifs.length} new
+                      {notifications.length} active
                     </span>
                   </div>
                   <div className="mt-2 divide-y divide-zinc-100 space-y-1 dark:divide-zinc-800">
-                    {currentNotifs.map((n, i) => (
+                    {notifications.map((n, i) => (
                       <div key={i} className="py-2">
                         <div className="flex items-center justify-between">
                           <p className="text-xs font-medium text-zinc-900 dark:text-zinc-100">
@@ -319,18 +188,33 @@ export function Navbar({
             )}
           </div>
 
-          {/* User Identity / Verification Badge */}
-          <div className="hidden items-center gap-2 border-l border-zinc-200 pl-3 md:flex dark:border-zinc-800">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-100 text-xs font-semibold text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">
-              {activeRoleConfig.label.charAt(0)}
+          {/* User Identity & Logout */}
+          <div className="flex items-center gap-3 border-l border-zinc-200 pl-3 dark:border-zinc-800">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 text-xs font-bold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+              {(currentUser?.name || currentUser?.email || activeRoleConfig.label).charAt(0).toUpperCase()}
             </div>
             <div className="hidden lg:block text-left text-xs">
               <div className="flex items-center gap-1 font-semibold text-zinc-900 dark:text-zinc-100">
-                <span>{activeRoleConfig.sub.split('(')[0].trim()}</span>
-                <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
+                <span className="truncate max-w-[130px]">
+                  {currentUser?.name || currentUser?.email?.split('@')[0]}
+                </span>
+                {currentUser?.isVerified && (
+                  <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
+                )}
               </div>
-              <span className="text-[10px] text-zinc-400">Verified Partner</span>
+              <span className="text-[10px] text-zinc-400 capitalize">
+                {currentUser?.organizationName || currentUser?.role || 'Verified Partner'}
+              </span>
             </div>
+
+            <button
+              type="button"
+              onClick={() => logoutAction()}
+              title="Sign Out"
+              className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-200 text-zinc-500 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600 dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-red-900 dark:hover:bg-red-950/40 dark:hover:text-red-400"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
           </div>
         </div>
       </div>

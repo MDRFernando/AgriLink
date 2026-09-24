@@ -21,12 +21,13 @@ import { StatCard } from '../common/StatCard';
 import { GradeBadge, StatusBadge, Badge } from '../common/Badge';
 import { ActionModal } from '../common/ActionModal';
 import { EmptyState } from '../common/EmptyState';
+import { ProductionListing, QualityGrade, DemandRequest, OrderItem } from '@/lib/types';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  MOCK_PRODUCTIONS,
-  MOCK_DEMANDS,
-  MOCK_ORDERS
-} from '@/lib/mockData';
-import { ProductionListing, QualityGrade, DemandRequest } from '@/lib/types';
+  getBuyerDataAction,
+  placeBidAction,
+  createDemandRequestAction,
+} from '@/app/actions/buyerActions';
 
 interface BuyerViewProps {
   activeTab: string;
@@ -34,8 +35,17 @@ interface BuyerViewProps {
 }
 
 export function BuyerView({ activeTab, searchQuery }: BuyerViewProps) {
-  const [productions, setProductions] = useState<ProductionListing[]>(MOCK_PRODUCTIONS);
-  const [demands, setDemands] = useState<DemandRequest[]>(MOCK_DEMANDS);
+  const queryClient = useQueryClient();
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['buyerData'],
+    queryFn: () => getBuyerDataAction(),
+  });
+
+  const productions = data?.productions || [];
+  const demands = data?.demands || [];
+  const orders = data?.orders || [];
+
   const [selectedGrade, setSelectedGrade] = useState<string>('all');
   const [selectedDistrict, setSelectedDistrict] = useState<string>('all');
   const [bidInputs, setBidInputs] = useState<Record<string, number>>({});
@@ -65,58 +75,50 @@ export function BuyerView({ activeTab, searchQuery }: BuyerViewProps) {
     return matchesSearch && matchesGrade && matchesDistrict;
   });
 
+  const placeBidMutation = useMutation({
+    mutationFn: ({ prodId, amount }: { prodId: string; amount: number }) =>
+      placeBidAction(prodId, amount),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['buyerData'] });
+      setPlacedBids((prev) => ({ ...prev, [variables.prodId]: variables.amount }));
+      setSuccessToast(`Bid of Rs. ${variables.amount}/kg placed! Synchronized with database.`);
+      setTimeout(() => setSuccessToast(null), 5000);
+    },
+    onError: (err: any) => {
+      setSuccessToast(`Bid failed: ${err?.message || 'Error'}`);
+      setTimeout(() => setSuccessToast(null), 5000);
+    },
+  });
+
+  const createDemandMutation = useMutation({
+    mutationFn: createDemandRequestAction,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['buyerData'] });
+      setIsDemandModalOpen(false);
+      setSuccessToast(`Forward sourcing demand published to database!`);
+      setTimeout(() => setSuccessToast(null), 5000);
+    },
+    onError: (err: any) => {
+      setSuccessToast(`Failed to publish demand: ${err?.message || 'Error'}`);
+      setTimeout(() => setSuccessToast(null), 5000);
+    },
+  });
+
   const handleBidSubmit = (prodId: string, currentMin: number) => {
     const inputVal = bidInputs[prodId] || currentMin + 5;
-    setPlacedBids((prev) => ({ ...prev, [prodId]: inputVal }));
-
-    // Soft-close rule: extend auction by 2 minutes if placed in final 5 minutes
-    setProductions((prev) =>
-      prev.map((p) => {
-        if (p.id === prodId && p.activeAuction) {
-          const newEndsIn =
-            p.activeAuction.endsInMinutes <= 5
-              ? p.activeAuction.endsInMinutes + 2
-              : p.activeAuction.endsInMinutes;
-
-          return {
-            ...p,
-            activeAuction: {
-              ...p.activeAuction,
-              currentHighestBid: inputVal,
-              bidCount: p.activeAuction.bidCount + 1,
-              endsInMinutes: newEndsIn,
-              highestBidderName: 'Keells Food Products (You)'
-            }
-          };
-        }
-        return p;
-      })
-    );
-
-    setSuccessToast(`Bid of Rs. ${inputVal}/kg placed! Soft-close timer extended by +2m if near deadline.`);
-    setTimeout(() => setSuccessToast(null), 5000);
+    placeBidMutation.mutate({ prodId, amount: inputVal });
   };
 
   const handleCreateDemand = (e: React.FormEvent) => {
     e.preventDefault();
-    const newDem: DemandRequest = {
-      id: `dem-${Date.now()}`,
-      buyerName: 'Rohan Jayasuriya',
-      buyerCompany: 'Keells Food Products PLC',
+    createDemandMutation.mutate({
       cropType: demandCrop,
       quantityNeededKg: Number(demandQty),
-      fulfilledKg: 0,
       targetPriceKg: Number(demandPrice),
       deadline: demandDeadline,
       district: 'Colombo Central Hub',
-      status: 'open',
-      notes: demandNotes
-    };
-
-    setDemands([newDem, ...demands]);
-    setIsDemandModalOpen(false);
-    setSuccessToast(`Forward sourcing demand for ${newDem.cropType} published to producer clusters!`);
-    setTimeout(() => setSuccessToast(null), 5000);
+      notes: demandNotes,
+    });
   };
 
   const handleConfirmDirectPurchase = () => {
@@ -137,7 +139,7 @@ export function BuyerView({ activeTab, searchQuery }: BuyerViewProps) {
             <span>/</span>
             <span className="font-semibold text-emerald-700 dark:text-emerald-400">Wholesale Procurement</span>
             <span>•</span>
-            <span>Keells Food Products PLC</span>
+            <span>Wholesale Procurement Desk</span>
           </div>
           <h1 className="mt-1 text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 sm:text-3xl">
             Live Produce Marketplace & Bidding
@@ -468,7 +470,7 @@ export function BuyerView({ activeTab, searchQuery }: BuyerViewProps) {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/60">
-                  {MOCK_ORDERS.map((ord) => (
+                  {orders.map((ord) => (
                     <tr
                       key={ord.id}
                       className="transition-colors hover:bg-zinc-50/70 dark:hover:bg-zinc-800/40"
