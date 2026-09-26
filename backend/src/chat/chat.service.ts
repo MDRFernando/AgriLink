@@ -36,7 +36,8 @@ export class ChatService {
       contents,
       generationConfig: {
         temperature: 0.3,
-        maxOutputTokens: 512,
+        maxOutputTokens: 2048,
+        thinkingConfig: { thinkingBudget: 0 },
       },
     });
 
@@ -49,7 +50,8 @@ export class ChatService {
     ];
     const uniqueModels = [...new Set([preferred, ...fallbacks].map((item) => item.trim()).filter(Boolean))];
 
-    let lastMessage = 'AgriLink chat could not complete that request.';
+    let lastMessage =
+      'දැන් පිළිතුර ලබා දිය නොහැක. මොහොතකින් නැවත උත්සාහ කරන්න.';
     for (const model of uniqueModels) {
       try {
         return { text: await this.callGemini(model, apiKey, body) };
@@ -85,8 +87,8 @@ export class ChatService {
         raw.toLowerCase().includes('aborted');
       throw new ServiceUnavailableException(
         timedOut
-          ? 'Gemini timed out. Trying another model.'
-          : `Could not reach Gemini from the AgriLink API (${raw}).`,
+          ? 'පිළිතුර ලැබීමට වැඩි කාලයක් ගත විය. කරුණාකර නැවත උත්සාහ කරන්න.'
+          : 'Gemini සම්බන්ධ කර ගත නොහැකි විය. කරුණාකර නැවත උත්සාහ කරන්න.',
       );
     }
 
@@ -134,15 +136,19 @@ export class ChatService {
         'Please ask a general question about using AgriLink.',
       );
     }
-    const content = first?.content as { parts?: Array<{ text?: string }> } | undefined;
-    const text = (content?.parts ?? [])
-      .map((part) => part.text ?? '')
-      .join('')
-      .replaceAll('**', '')
-      .replace(/^#{1,6}\s*/gm, '')
-      .trim();
+    const content = first?.content as {
+      parts?: Array<{ text?: string; thought?: boolean }>;
+    } | undefined;
+    const text = stripMeta(
+      (content?.parts ?? [])
+        .filter((part) => part.thought !== true)
+        .map((part) => part.text ?? '')
+        .join(''),
+    );
     if (!text) {
-      throw new ServiceUnavailableException('AgriLink chat did not return a reply.');
+      throw new ServiceUnavailableException(
+        'පිළිතුරක් ලැබුණේ නැත. කරුණාකර ප්‍රශ්නය නැවත අසන්න.',
+      );
     }
     return text;
   }
@@ -158,7 +164,24 @@ export class ChatService {
       raw.includes('unavailable') ||
       raw.includes('timed out') ||
       raw.includes('could not reach') ||
-      raw.includes('aborted')
+      raw.includes('aborted') ||
+      raw.includes('පිළිතුර ලැබීමට')
     );
   }
+}
+
+function stripMeta(raw: string): string {
+  return raw
+    .replaceAll('**', '')
+    .replace(/^#{1,6}\s*/gm, '')
+    .split('\n')
+    .filter((line) => !isMetaLine(line))
+    .join('\n')
+    .trim();
+}
+
+function isMetaLine(line: string): boolean {
+  const text = line.trim();
+  return /^(\*\s*)?(let's|let us|i will|i'll|here's how i|here is how i)\b/i.test(text)
+    || /\b(write it in|internal thought|reasoning:|draft:)\b/i.test(text);
 }

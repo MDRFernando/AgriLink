@@ -94,6 +94,29 @@ void main() {
     expect(text, 'List produce\nUse List produce on Home.');
   });
 
+  test('Gemini parser hides internal thoughts and planning lines', () {
+    final text = GeminiClient.parseText({
+      'candidates': [
+        {
+          'content': {
+            'parts': [
+              {
+                'thought': true,
+                'text': "* Let's write it in clear, simple Sinhala script:",
+              },
+              {
+                'text':
+                    "Let's write it in Sinhala:\nනිෂ්පාදන ලැයිස්තුගත කිරීමට Home තිරයේ List produce තෝරන්න.",
+              },
+            ],
+          },
+        },
+      ],
+    });
+
+    expect(text, 'නිෂ්පාදන ලැයිස්තුගත කිරීමට Home තිරයේ List produce තෝරන්න.');
+  });
+
   test('Gemini parser rejects safety-blocked replies', () {
     expect(
       () => GeminiClient.parseText({
@@ -109,7 +132,8 @@ void main() {
     expect(AgriLinkGuide.systemPrompt, contains('Do not use, request, or invent'));
     expect(AgriLinkGuide.systemPrompt, contains('List produce'));
     expect(AgriLinkGuide.systemPrompt, contains('Crop planning'));
-    expect(AgriLinkGuide.systemPrompt, contains('personal details'));
+    expect(AgriLinkGuide.systemPrompt, contains('Singlish'));
+    expect(AgriLinkGuide.systemPrompt, contains('Never output reasoning'));
   });
 
   test('non-farmers cannot send chat messages', () async {

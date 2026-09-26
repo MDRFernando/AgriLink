@@ -44,8 +44,9 @@ class GeminiClient {
       },
       'contents': contents,
       'generationConfig': {
-        'temperature': 0.4,
-        'maxOutputTokens': 1024,
+        'temperature': 0.3,
+        'maxOutputTokens': 2048,
+        'thinkingConfig': {'thinkingBudget': 0},
       },
     });
 
@@ -112,7 +113,9 @@ class GeminiClient {
 
     final candidates = json['candidates'];
     if (candidates is! List || candidates.isEmpty) {
-      throw GeminiException('AgriLink chat did not return a reply.');
+      throw GeminiException(
+        'පිළිතුරක් ලැබුණේ නැත. කරුණාකර ප්‍රශ්නය නැවත අසන්න.',
+      );
     }
 
     final first = candidates.first;
@@ -138,22 +141,41 @@ class GeminiClient {
 
     final buffer = StringBuffer();
     for (final part in parts) {
-      if (part is Map && part['text'] is String) {
+      if (part is! Map || part['thought'] == true) continue;
+      if (part['text'] is String) {
         buffer.write(part['text']);
       }
     }
-    final text = buffer.toString().trim();
+    final text = _forDisplay(buffer.toString());
     if (text.isEmpty) {
-      throw GeminiException('AgriLink chat returned an empty reply.');
+      throw GeminiException(
+        'පිළිතුරක් ලැබුණේ නැත. කරුණාකර ප්‍රශ්නය නැවත අසන්න.',
+      );
     }
-    return _forDisplay(text);
+    return text;
   }
 
   static String _forDisplay(String raw) {
-    return raw
+    final cleaned = raw
         .replaceAll('**', '')
-        .replaceAll(RegExp(r'^#{1,6}\s*', multiLine: true), '')
+        .replaceAll(RegExp(r'^#{1,6}\s*', multiLine: true), '');
+    return cleaned
+        .split('\n')
+        .where((line) => !_isMetaLine(line))
+        .join('\n')
         .trim();
+  }
+
+  static bool _isMetaLine(String line) {
+    final text = line.trim();
+    return RegExp(
+          r"^(\*\s*)?(let's|let us|i will|i'll|here's how i|here is how i)\b",
+          caseSensitive: false,
+        ).hasMatch(text) ||
+        RegExp(
+          r"\b(write it in|internal thought|reasoning:|draft:)\b",
+          caseSensitive: false,
+        ).hasMatch(text);
   }
 
   Future<String> _postModel({
@@ -175,9 +197,11 @@ class GeminiClient {
             },
             body: body,
           )
-          .timeout(const Duration(seconds: 30));
+          .timeout(const Duration(seconds: 45));
     } on TimeoutException {
-      throw GeminiException('AgriLink chat timed out. Try again.');
+      throw GeminiException(
+        'පිළිතුර ලැබීමට වැඩි කාලයක් ගත විය. කරුණාකර නැවත උත්සාහ කරන්න.',
+      );
     } catch (error) {
       throw GeminiException(_unreachableMessage(error));
     }

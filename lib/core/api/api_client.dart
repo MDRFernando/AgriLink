@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:my_app/shared/entities/enums.dart';
 import 'package:my_app/shared/entities/models.dart';
@@ -16,10 +18,19 @@ class AgriLinkApi {
   AgriLinkApi._();
   static final AgriLinkApi instance = AgriLinkApi._();
 
-  static const baseUrl = String.fromEnvironment(
-    'API_BASE_URL',
-    defaultValue: 'http://127.0.0.1:3000/api/v1',
-  );
+  static const _configuredBaseUrl = String.fromEnvironment('API_BASE_URL');
+
+  /// Browser chat must call the API on the same host the page was opened with.
+  /// Chrome blocks `localhost` pages from calling `127.0.0.1`.
+  static String get baseUrl {
+    if (_configuredBaseUrl.isNotEmpty) return _configuredBaseUrl;
+    if (kIsWeb) {
+      final host = Uri.base.host;
+      final name = host.isEmpty ? 'localhost' : host;
+      return 'http://$name:3000/api/v1';
+    }
+    return 'http://127.0.0.1:3000/api/v1';
+  }
 
   String? token;
 
@@ -137,14 +148,20 @@ class AgriLinkApi {
     required List<Map<String, String>> messages,
     required String userText,
   }) async {
-    final data = await _post('/chat/farmer', {
-      'messages': messages,
-      'userText': userText,
-    });
+    final data = await _post(
+      '/chat/farmer',
+      {
+        'messages': messages,
+        'userText': userText,
+      },
+      timeout: const Duration(seconds: 45),
+    );
     if (data is Map && data['text'] is String && (data['text'] as String).trim().isNotEmpty) {
       return data['text'] as String;
     }
-    throw AgriLinkApiException('AgriLink chat did not return a reply.');
+    throw AgriLinkApiException(
+      'පිළිතුරක් ලැබුණේ නැත. කරුණාකර ප්‍රශ්නය නැවත අසන්න.',
+    );
   }
 
   UserProfile _authProfile(dynamic data) {
@@ -154,8 +171,12 @@ class AgriLinkApi {
   }
 
   Future<dynamic> _get(String path) => _send('GET', path);
-  Future<dynamic> _post(String path, Map<String, dynamic> body) =>
-      _send('POST', path, body: body);
+  Future<dynamic> _post(
+    String path,
+    Map<String, dynamic> body, {
+    Duration? timeout,
+  }) =>
+      _send('POST', path, body: body, timeout: timeout);
   Future<dynamic> _patch(String path, Map<String, dynamic> body) =>
       _send('PATCH', path, body: body);
 
@@ -163,6 +184,7 @@ class AgriLinkApi {
     String method,
     String path, {
     Map<String, dynamic>? body,
+    Duration? timeout,
   }) async {
     final uri = Uri.parse('$baseUrl$path');
     final headers = <String, String>{
@@ -171,14 +193,21 @@ class AgriLinkApi {
     };
     late http.Response res;
     try {
+      Future<http.Response> request;
       if (method == 'GET') {
-        res = await http.get(uri, headers: headers);
+        request = http.get(uri, headers: headers);
       } else if (method == 'PATCH') {
-        res = await http.patch(uri, headers: headers, body: jsonEncode(body));
+        request = http.patch(uri, headers: headers, body: jsonEncode(body));
       } else {
-        res = await http.post(uri, headers: headers, body: jsonEncode(body));
+        request = http.post(uri, headers: headers, body: jsonEncode(body));
       }
-    } catch (_) {
+      res = timeout == null ? await request : await request.timeout(timeout);
+    } on TimeoutException {
+      throw AgriLinkApiException(
+        'පිළිතුර ලැබීමට වැඩි කාලයක් ගත විය. කරුණාකර නැවත උත්සාහ කරන්න.',
+      );
+    } catch (error) {
+      if (error is AgriLinkApiException) rethrow;
       throw AgriLinkApiException('Could not reach AgriLink. Is the API running?');
     }
     if (res.statusCode < 200 || res.statusCode >= 300) {
