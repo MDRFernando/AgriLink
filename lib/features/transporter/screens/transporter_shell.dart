@@ -21,6 +21,14 @@ class _TransporterShellState extends ConsumerState<TransporterShell> {
   int _index = 0;
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(logisticsProvider.notifier).syncOrders(role: UserRole.transporter);
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     return RoleScaffold(
       title: 'Transporter Dashboard',
@@ -148,15 +156,17 @@ class _JobCard extends ConsumerWidget {
                   const SizedBox(width: 12),
                   Expanded(
                     child: FilledButton(
-                      onPressed: () {
+                      onPressed: () async {
                         final t = ref.read(logisticsProvider).transporters.firstWhere(
                               (x) => x.id == (ref.read(authProvider).profile?.id ?? 'transporter-demo'),
                               orElse: () => ref.read(logisticsProvider).transporters.first,
                             );
                         try {
-                          ref.read(logisticsProvider.notifier).acceptJob(job.id, t);
+                          await ref.read(logisticsProvider.notifier).acceptJob(job.id, t);
+                          if (!context.mounted) return;
                           context.push('/transporter/jobs/${job.id}');
                         } catch (e) {
+                          if (!context.mounted) return;
                           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
                         }
                       },

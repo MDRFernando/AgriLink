@@ -346,6 +346,10 @@ class AppDataNotifier extends StateNotifier<AppDataState> {
         bids = await AgriLinkApi.instance.fetchBuyerBids();
       }
       state = state.copyWith(productions: listings, bids: bids);
+      if (role == UserRole.farmer) {
+        final plans = await AgriLinkApi.instance.fetchMyCropPlans('Farmer');
+        state = state.copyWith(cropPlans: plans);
+      }
     } on AgriLinkApiException {
       // Keep local data if the API is briefly unavailable.
     }

@@ -73,6 +73,24 @@ class _AddProductionScreenState extends ConsumerState<AddProductionScreen> {
                     ),
               ),
               const SizedBox(height: 12),
+              Consumer(
+                builder: (context, ref, _) {
+                  final planned = ref.watch(farmerCropPlansProvider)
+                      .where((plan) => plan.status != CropPlanStatus.cancelled)
+                      .map((plan) => plan.cropType)
+                      .toSet();
+                  if (planned.isEmpty) return const SizedBox.shrink();
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Text(
+                      'From your crop plan: ${planned.join(', ')}. List one of these so buyers can bid on the crop government is tracking.',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: AppColors.textSecondary,
+                          ),
+                    ),
+                  );
+                },
+              ),
               CropTypeSelector(
                 selected: _cropType,
                 onSelected: (v) => setState(() => _cropType = v),

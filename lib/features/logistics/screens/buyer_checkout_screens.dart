@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:my_app/core/api/api_client.dart';
 import 'package:my_app/core/theme/app_colors.dart';
 import 'package:my_app/core/widgets/common_widgets.dart';
 import 'package:my_app/features/logistics/widgets/logistics_ui.dart';
@@ -72,10 +73,15 @@ class _BuyerPaymentScreenState extends ConsumerState<BuyerPaymentScreen> {
           const SizedBox(height: 16),
           AppButton(
             label: 'Pay ${lkr.format(order.productTotal)}',
-            onPressed: () {
-              ref
+            onPressed: () async {
+              final error = await ref
                   .read(logisticsProvider.notifier)
                   .payProduct(order.id, _method);
+              if (!context.mounted) return;
+              if (error != null) {
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
+                return;
+              }
               context.go('/business/orders/${order.id}/delivery');
             },
           ),
@@ -283,7 +289,7 @@ class _DeliveryAddressScreenState extends ConsumerState<DeliveryAddressScreen> {
             const SizedBox(height: 20),
             AppButton(
               label: 'Find a transporter',
-              onPressed: () {
+              onPressed: () async {
                 if (!_form.currentState!.validate()) return;
                 final profile = ref.read(authProvider).profile;
                 final address = DeliveryAddress(
@@ -297,9 +303,18 @@ class _DeliveryAddressScreenState extends ConsumerState<DeliveryAddressScreen> {
                   instructions: _notes.text.trim(),
                 );
                 ref.read(logisticsProvider.notifier).addAddress(address);
-                ref
-                    .read(logisticsProvider.notifier)
-                    .createTransportRequest(order: order, address: address);
+                try {
+                  await ref
+                      .read(logisticsProvider.notifier)
+                      .createTransportRequest(order: order, address: address);
+                } on AgriLinkApiException catch (error) {
+                  if (!context.mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(error.message)),
+                  );
+                  return;
+                }
+                if (!context.mounted) return;
                 context.go('/business/orders/${order.id}/transport');
               },
             ),
@@ -444,10 +459,25 @@ class TransportConfirmScreen extends ConsumerWidget {
             onPressed:
                 job.transporterId == null
                     ? null
-                    : () {
-                      ref
-                          .read(logisticsProvider.notifier)
-                          .confirmTransport(job!.id, 'Card');
+                    : () async {
+                      try {
+                        await ref
+                            .read(logisticsProvider.notifier)
+                            .confirmTransport(job!.id, 'Card');
+                      } on AgriLinkApiException catch (error) {
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(error.message)),
+                        );
+                        return;
+                      } catch (error) {
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('$error')),
+                        );
+                        return;
+                      }
+                      if (!context.mounted) return;
                       context.go('/business/tracking/${job.id}');
                     },
           ),

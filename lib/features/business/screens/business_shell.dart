@@ -32,7 +32,7 @@ class _BusinessShellState extends ConsumerState<BusinessShell> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final role = ref.read(authProvider).profile?.role;
       ref.read(appDataProvider.notifier).syncFromApi(role);
-      ref.read(logisticsProvider.notifier).syncOrders();
+      ref.read(logisticsProvider.notifier).syncOrders(role: UserRole.business);
     });
   }
 
@@ -45,7 +45,7 @@ class _BusinessShellState extends ConsumerState<BusinessShell> {
         onDestinationSelected: (i) {
           setState(() => _index = i);
           if (i == 2) {
-            ref.read(logisticsProvider.notifier).syncOrders();
+            ref.read(logisticsProvider.notifier).syncOrders(role: UserRole.business);
             ref.read(appDataProvider.notifier).refreshBids(UserRole.business);
           }
           if (i == 3) {

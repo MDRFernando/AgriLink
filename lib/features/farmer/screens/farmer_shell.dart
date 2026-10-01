@@ -32,7 +32,7 @@ class _FarmerShellState extends ConsumerState<FarmerShell> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(appDataProvider.notifier).syncFromApi(UserRole.farmer);
-      ref.read(logisticsProvider.notifier).syncOrders();
+      ref.read(logisticsProvider.notifier).syncOrders(role: UserRole.farmer);
     });
   }
 

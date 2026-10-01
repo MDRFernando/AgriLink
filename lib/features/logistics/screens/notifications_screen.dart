@@ -12,13 +12,22 @@ class NotificationsScreen extends ConsumerWidget {
     final items = ref.watch(myNotificationsProvider);
     return Scaffold(
       appBar: AppBar(title: const Text('Notifications')),
-      body: items.isEmpty
-          ? const EmptyStateView(
-              icon: Icons.notifications_none,
-              title: 'No notifications',
-              message: 'Order, payment, and delivery updates will appear here.',
+      body: RefreshIndicator(
+        onRefresh: () => ref.read(logisticsProvider.notifier).syncOrders(),
+        child: items.isEmpty
+          ? ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              children: const [
+                SizedBox(height: 120),
+                EmptyStateView(
+                  icon: Icons.notifications_none,
+                  title: 'No notifications',
+                  message: 'Bids, accepted orders, and transport updates appear here.',
+                ),
+              ],
             )
           : ListView.separated(
+              physics: const AlwaysScrollableScrollPhysics(),
               itemCount: items.length,
               separatorBuilder: (_, __) => const Divider(height: 1),
               itemBuilder: (context, i) {
@@ -30,6 +39,7 @@ class NotificationsScreen extends ConsumerWidget {
                 );
               },
             ),
+      ),
     );
   }
 }

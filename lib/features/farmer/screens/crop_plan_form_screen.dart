@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:my_app/core/api/api_client.dart';
 import 'package:my_app/core/constants/sri_lanka_geo.dart';
 import 'package:my_app/core/theme/app_colors.dart';
 import 'package:my_app/core/widgets/common_widgets.dart';
@@ -95,7 +96,7 @@ class _CropPlanFormScreenState extends ConsumerState<CropPlanFormScreen> {
     return ds.first.villages;
   }
 
-  void _save() {
+  Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     if (_cropType == null ||
         _province == null ||
@@ -114,8 +115,39 @@ class _CropPlanFormScreenState extends ConsumerState<CropPlanFormScreen> {
     final area = double.parse(_areaController.text);
     final yieldText = _yieldController.text.trim();
     final yieldKg = yieldText.isEmpty ? null : double.tryParse(yieldText);
+    final notes = _notesController.text.trim().isEmpty ? null : _notesController.text.trim();
+    final farmerName = profile.name.isEmpty ? 'Farmer' : profile.name;
 
-    if (_existing != null) {
+    if (AgriLinkApi.instance.hasToken) {
+      try {
+        final body = {
+          'cropType': _cropType,
+          'cultivationYear': _year,
+          'cultivationMonth': _month,
+          if (_season != null) 'season': _season == CultivationSeason.offSeason ? 'off_season' : _season!.name,
+          'areaAcres': area,
+          'province': _province,
+          'district': _district,
+          'dsDivision': _dsDivision,
+          'village': _village,
+          if (notes != null) 'locationNotes': notes,
+          if (yieldKg != null) 'expectedYieldKg': yieldKg,
+          if (_existing != null) 'status': _status.name,
+        };
+        final saved = _existing == null
+            ? await AgriLinkApi.instance.createCropPlan(body, farmerName: farmerName)
+            : await AgriLinkApi.instance.updateCropPlan(_existing!.id, body, farmerName: farmerName);
+        if (_existing == null) {
+          ref.read(appDataProvider.notifier).addCropPlan(saved);
+        } else {
+          ref.read(appDataProvider.notifier).updateCropPlan(saved);
+        }
+      } on AgriLinkApiException catch (error) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message)));
+        return;
+      }
+    } else if (_existing != null) {
       ref.read(appDataProvider.notifier).updateCropPlan(
             _existing!.copyWith(
               cropType: _cropType,
@@ -160,6 +192,7 @@ class _CropPlanFormScreenState extends ConsumerState<CropPlanFormScreen> {
           );
     }
 
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(

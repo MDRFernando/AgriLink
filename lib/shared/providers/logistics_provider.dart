@@ -203,14 +203,66 @@ class LogisticsNotifier extends StateNotifier<LogisticsState> {
     return order;
   }
 
-  Future<void> syncOrders() async {
+  Future<void> syncOrders({UserRole? role}) async {
     if (!AgriLinkApi.instance.hasToken) return;
     try {
       final incoming = await AgriLinkApi.instance.fetchOrders();
       state = state.copyWith(orders: incoming);
     } on AgriLinkApiException {
-      // Keep local logistics if the API is briefly unavailable.
+      // Keep local orders if the API is briefly unavailable.
     }
+    try {
+      final notes = await AgriLinkApi.instance.fetchNotifications();
+      state = state.copyWith(notifications: notes);
+    } on AgriLinkApiException {
+      // Keep local notifications if the API is briefly unavailable.
+    }
+    try {
+      final List<TransportJob> jobs;
+      if (role == UserRole.transporter) {
+        final open = await AgriLinkApi.instance.fetchOpenTransportJobs();
+        final mine = await AgriLinkApi.instance.fetchMyTransportJobs();
+        final seen = <String>{};
+        jobs = [
+          for (final job in [...mine, ...open])
+            if (seen.add(job.id)) job,
+        ];
+      } else {
+        jobs = await AgriLinkApi.instance.fetchTransportRequests();
+      }
+      state = state.copyWith(jobs: jobs);
+    } on AgriLinkApiException {
+      // Keep local transport jobs if this role cannot list them.
+    }
+  }
+
+  Future<String?> payProduct(String orderId, String method) async {
+    if (AgriLinkApi.instance.hasToken) {
+      try {
+        await AgriLinkApi.instance.payOrder(orderId, method);
+        await syncOrders();
+        return null;
+      } on AgriLinkApiException catch (error) {
+        return error.message;
+      }
+    }
+
+    state = state.copyWith(
+      orders: state.orders
+          .map(
+            (o) => o.id == orderId
+                ? o.copyWith(
+                    orderStatus: OrderStatus.deliveryRequired,
+                    productPaymentStatus: PaymentRecordStatus.paid,
+                  )
+                : o,
+          )
+          .toList(),
+    );
+    final order = state.orders.firstWhere((o) => o.id == orderId);
+    notify(order.buyerId, 'Payment successful', 'Your products are ready to be delivered.');
+    notify(order.farmerId, 'Payment confirmed', 'Product payment received via $method.');
+    return null;
   }
 
   void mergeOrders(List<MarketOrder> incoming) {
@@ -231,24 +283,6 @@ class LogisticsNotifier extends StateNotifier<LogisticsState> {
     state = state.copyWith(orders: [...extras, ...state.orders]);
   }
 
-  void payProduct(String orderId, String method) {
-    state = state.copyWith(
-      orders: state.orders
-          .map(
-            (o) => o.id == orderId
-                ? o.copyWith(
-                    orderStatus: OrderStatus.deliveryRequired,
-                    productPaymentStatus: PaymentRecordStatus.paid,
-                  )
-                : o,
-          )
-          .toList(),
-    );
-    final order = state.orders.firstWhere((o) => o.id == orderId);
-    notify(order.buyerId, 'Payment successful', 'Your products are ready to be delivered.');
-    notify(order.farmerId, 'Payment confirmed', 'Product payment received via $method.');
-  }
-
   void chooseOwnTransport(String orderId) {
     state = state.copyWith(
       orders: state.orders
@@ -257,10 +291,31 @@ class LogisticsNotifier extends StateNotifier<LogisticsState> {
     );
   }
 
-  TransportJob createTransportRequest({
+  Future<TransportJob?> createTransportRequest({
     required MarketOrder order,
     required DeliveryAddress address,
-  }) {
+  }) async {
+    if (AgriLinkApi.instance.hasToken) {
+      final saved = address.id.startsWith('addr-')
+          ? await AgriLinkApi.instance.createDeliveryAddress({
+              'businessName': address.businessName,
+              'contactPerson': address.contactPerson,
+              'phone': address.phone,
+              'address': address.address,
+              'city': address.city,
+              if (address.instructions != null && address.instructions!.isNotEmpty)
+                'instructions': address.instructions,
+            })
+          : address;
+      final job = await AgriLinkApi.instance.createTransportRequest(
+        orderId: order.id,
+        deliveryMethod: 'bit_app_transport',
+        deliveryAddressId: saved.id,
+      );
+      await syncOrders();
+      return job;
+    }
+
     final vehicle = requiredVehicleFor(order.quantityKg);
     const distanceKm = 94.0;
     final cost = quoteTransport(
@@ -351,7 +406,13 @@ class LogisticsNotifier extends StateNotifier<LogisticsState> {
     notify(job.transporterId ?? '', 'New rating', 'Buyer rated this delivery $rating/5.');
   }
 
-  void acceptJob(String jobId, TransporterOption transporter) {
+  Future<void> acceptJob(String jobId, TransporterOption transporter) async {
+    if (AgriLinkApi.instance.hasToken) {
+      await AgriLinkApi.instance.acceptTransportJob(jobId);
+      await syncOrders(role: UserRole.transporter);
+      return;
+    }
+
     final job = state.jobs.firstWhere((j) => j.id == jobId);
     if (transporter.capacityKg < job.quantityKg) {
       throw StateError('Vehicle capacity is insufficient');
@@ -380,8 +441,18 @@ class LogisticsNotifier extends StateNotifier<LogisticsState> {
     notify(transporter.id, 'Job accepted', 'Head to ${job.pickupCity} for pickup.');
   }
 
-  void confirmTransport(String jobId, String method) {
+  Future<void> confirmTransport(String jobId, String method) async {
     final job = state.jobs.firstWhere((j) => j.id == jobId);
+    if (AgriLinkApi.instance.hasToken) {
+      final transporterId = job.transporterId;
+      if (transporterId == null || transporterId.isEmpty) {
+        throw StateError('No transporter has accepted this job yet');
+      }
+      await AgriLinkApi.instance.confirmTransportJob(jobId, transporterId, method);
+      await syncOrders();
+      return;
+    }
+
     _patchJob(
       jobId,
       job.copyWith(transportPaymentStatus: PaymentRecordStatus.paid),

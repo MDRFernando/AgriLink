@@ -144,6 +144,76 @@ class AgriLinkApi {
     return _asList(data).map((item) => mapOrder(item as Map<String, dynamic>)).toList();
   }
 
+  Future<void> payOrder(String orderId, String method) async {
+    await _post('/orders/$orderId/pay', {'method': method});
+  }
+
+  Future<List<AppNotificationItem>> fetchNotifications() async {
+    final data = await _get('/notifications');
+    return _asList(data).map((item) => mapNotification(item as Map<String, dynamic>)).toList();
+  }
+
+  Future<List<CropPlan>> fetchMyCropPlans(String farmerName) async {
+    final data = await _get('/crop-plans/mine');
+    return _asList(data)
+        .map((item) => mapCropPlan(item as Map<String, dynamic>, farmerName: farmerName))
+        .toList();
+  }
+
+  Future<CropPlan> createCropPlan(Map<String, dynamic> body, {required String farmerName}) async {
+    final data = await _post('/crop-plans', body);
+    return mapCropPlan(data as Map<String, dynamic>, farmerName: farmerName);
+  }
+
+  Future<CropPlan> updateCropPlan(String id, Map<String, dynamic> body, {required String farmerName}) async {
+    final data = await _patch('/crop-plans/$id', body);
+    return mapCropPlan(data as Map<String, dynamic>, farmerName: farmerName);
+  }
+
+  Future<DeliveryAddress> createDeliveryAddress(Map<String, dynamic> body) async {
+    final data = await _post('/delivery-addresses', body);
+    return mapAddress(data as Map<String, dynamic>);
+  }
+
+  Future<TransportJob> createTransportRequest({
+    required String orderId,
+    required String deliveryMethod,
+    String? deliveryAddressId,
+  }) async {
+    final data = await _post('/transport-requests', {
+      'orderId': orderId,
+      'deliveryMethod': deliveryMethod,
+      if (deliveryAddressId != null) 'deliveryAddressId': deliveryAddressId,
+    });
+    return mapTransportJob(data as Map<String, dynamic>);
+  }
+
+  Future<List<TransportJob>> fetchTransportRequests() async {
+    final data = await _get('/transport-requests');
+    return _asList(data).map((item) => mapTransportJob(item as Map<String, dynamic>)).toList();
+  }
+
+  Future<List<TransportJob>> fetchOpenTransportJobs() async {
+    final data = await _get('/transporter/jobs');
+    return _asList(data).map((item) => mapTransportJob(item as Map<String, dynamic>)).toList();
+  }
+
+  Future<List<TransportJob>> fetchMyTransportJobs() async {
+    final data = await _get('/transporter/my-jobs');
+    return _asList(data).map((item) => mapTransportJob(item as Map<String, dynamic>)).toList();
+  }
+
+  Future<void> acceptTransportJob(String requestId) async {
+    await _post('/transport-requests/$requestId/accept', {});
+  }
+
+  Future<void> confirmTransportJob(String requestId, String transporterId, String method) async {
+    await _post('/transport-requests/$requestId/confirm', {
+      'transporterId': transporterId,
+      'paymentMethod': method,
+    });
+  }
+
   Future<String> farmerChat({
     required List<Map<String, String>> messages,
     required String userText,
@@ -325,6 +395,107 @@ MarketOrder mapOrder(Map<String, dynamic> json) {
   );
 }
 
+AppNotificationItem mapNotification(Map<String, dynamic> json) {
+  return AppNotificationItem(
+    id: json['id']?.toString() ?? '',
+    userId: json['userId']?.toString() ?? '',
+    title: json['title']?.toString() ?? '',
+    body: json['body']?.toString() ?? '',
+    createdAt: DateTime.tryParse(json['createdAt']?.toString() ?? '') ?? DateTime.now(),
+    read: json['readAt'] != null,
+  );
+}
+
+CropPlan mapCropPlan(Map<String, dynamic> json, {required String farmerName}) {
+  return CropPlan(
+    id: json['id']?.toString() ?? '',
+    farmerId: json['farmerId']?.toString() ?? '',
+    farmerName: farmerName,
+    cropType: json['cropType']?.toString() ?? '',
+    cultivationYear: (json['cultivationYear'] as num?)?.toInt() ?? DateTime.now().year,
+    cultivationMonth: (json['cultivationMonth'] as num?)?.toInt() ?? 1,
+    season: _season(json['season']?.toString()),
+    areaAcres: (json['areaAcres'] as num?)?.toDouble() ?? 0,
+    province: json['province']?.toString() ?? '',
+    district: json['district']?.toString() ?? '',
+    dsDivision: json['dsDivision']?.toString() ?? '',
+    village: json['village']?.toString() ?? '',
+    locationNotes: json['locationNotes']?.toString(),
+    expectedYieldKg: (json['expectedYieldKg'] as num?)?.toDouble(),
+    status: _cropPlanStatus(json['status']?.toString()),
+    createdAt: DateTime.tryParse(json['createdAt']?.toString() ?? ''),
+  );
+}
+
+DeliveryAddress mapAddress(Map<String, dynamic> json) {
+  return DeliveryAddress(
+    id: json['id']?.toString() ?? '',
+    buyerId: json['buyerId']?.toString() ?? '',
+    businessName: json['businessName']?.toString() ?? '',
+    contactPerson: json['contactPerson']?.toString() ?? '',
+    phone: json['phone']?.toString() ?? '',
+    address: json['address']?.toString() ?? '',
+    city: json['city']?.toString() ?? '',
+    latitude: (json['latitude'] as num?)?.toDouble() ?? 6.9271,
+    longitude: (json['longitude'] as num?)?.toDouble() ?? 79.8612,
+    instructions: json['instructions']?.toString(),
+  );
+}
+
+TransportJob mapTransportJob(Map<String, dynamic> json) {
+  final vehicle = json['vehicle'] as Map<String, dynamic>?;
+  final transporter = json['transporter'] as Map<String, dynamic>?;
+  final payment = json['payment'] as Map<String, dynamic>?;
+  final tracking = json['tracking'];
+  return TransportJob(
+    id: json['id']?.toString() ?? '',
+    code: json['requestCode']?.toString() ?? json['code']?.toString() ?? '',
+    orderId: json['orderId']?.toString() ?? '',
+    buyerId: json['buyerId']?.toString() ?? '',
+    farmerId: json['farmerId']?.toString() ?? '',
+    product: json['product']?.toString() ?? 'Produce',
+    quantityKg: (json['quantityKg'] as num?)?.toDouble() ?? 0,
+    pickupLabel: json['pickupLabel']?.toString() ?? '',
+    pickupCity: json['pickupCity']?.toString() ?? '',
+    deliveryLabel: json['deliveryLabel']?.toString() ?? '',
+    deliveryCity: json['deliveryCity']?.toString() ?? '',
+    vehicleType: _vehicleType(
+      vehicle?['vehicleType']?.toString() ?? json['requiredVehicleType']?.toString(),
+    ),
+    distanceKm: (json['distanceKm'] as num?)?.toDouble() ?? 0,
+    estimatedCost: (json['estimatedCost'] as num?)?.toDouble() ?? 0,
+    status: _transportStatus(json['status']?.toString()),
+    method: json['deliveryMethod'] == 'own_transport'
+        ? DeliveryMethod.ownTransport
+        : DeliveryMethod.bitAppTransport,
+    transporterId: json['transporterId']?.toString(),
+    transporterName: transporter?['organizationName']?.toString() ??
+        transporter?['name']?.toString(),
+    vehicleNumber: vehicle?['vehicleNumber']?.toString(),
+    driverName: json['driverName']?.toString(),
+    pickupLat: (json['pickupLat'] as num?)?.toDouble(),
+    pickupLng: (json['pickupLng'] as num?)?.toDouble(),
+    deliveryLat: (json['deliveryLat'] as num?)?.toDouble(),
+    deliveryLng: (json['deliveryLng'] as num?)?.toDouble(),
+    transportPaymentStatus:
+        payment == null ? null : _paymentStatus(payment['paymentStatus']?.toString()),
+    tracking: tracking is List
+        ? [
+            for (final point in tracking)
+              if (point is Map<String, dynamic>)
+                TrackingPoint(
+                  status: _transportStatus(point['status']?.toString()),
+                  timestamp: DateTime.tryParse(point['createdAt']?.toString() ?? '') ??
+                      DateTime.now(),
+                  lat: (point['latitude'] as num?)?.toDouble(),
+                  lng: (point['longitude'] as num?)?.toDouble(),
+                  note: point['note']?.toString(),
+                ),
+          ]
+        : const [],
+  );
+}
+
 UserRole _role(String? value) {
   switch (value) {
     case 'business':
@@ -429,5 +600,75 @@ PaymentRecordStatus _paymentStatus(String? value) {
       return PaymentRecordStatus.failed;
     default:
       return PaymentRecordStatus.pending;
+  }
+}
+
+CultivationSeason? _season(String? value) {
+  switch (value) {
+    case 'maha':
+      return CultivationSeason.maha;
+    case 'yala':
+      return CultivationSeason.yala;
+    case 'off_season':
+      return CultivationSeason.offSeason;
+    default:
+      return null;
+  }
+}
+
+CropPlanStatus _cropPlanStatus(String? value) {
+  switch (value) {
+    case 'cultivating':
+      return CropPlanStatus.cultivating;
+    case 'harvested':
+      return CropPlanStatus.harvested;
+    case 'cancelled':
+      return CropPlanStatus.cancelled;
+    default:
+      return CropPlanStatus.planned;
+  }
+}
+
+VehicleType _vehicleType(String? value) {
+  switch (value) {
+    case 'small_lorry':
+      return VehicleType.smallLorry;
+    case 'medium_lorry':
+      return VehicleType.mediumLorry;
+    case 'large_lorry':
+      return VehicleType.largeLorry;
+    default:
+      return VehicleType.pickup;
+  }
+}
+
+TransportStatus _transportStatus(String? value) {
+  switch (value) {
+    case 'matching':
+      return TransportStatus.matching;
+    case 'assigned':
+      return TransportStatus.assigned;
+    case 'accepted':
+      return TransportStatus.accepted;
+    case 'waiting_pickup':
+      return TransportStatus.waitingPickup;
+    case 'arrived_at_pickup':
+      return TransportStatus.arrivedAtPickup;
+    case 'loaded':
+      return TransportStatus.loaded;
+    case 'in_transit':
+      return TransportStatus.inTransit;
+    case 'arrived_at_destination':
+      return TransportStatus.arrivedAtDestination;
+    case 'delivered':
+      return TransportStatus.delivered;
+    case 'buyer_confirmed':
+      return TransportStatus.buyerConfirmed;
+    case 'completed':
+      return TransportStatus.completed;
+    case 'cancelled':
+      return TransportStatus.cancelled;
+    default:
+      return TransportStatus.requested;
   }
 }

@@ -118,9 +118,11 @@ export class LogisticsService {
     if (order.buyerId !== user.id) throw new ForbiddenException();
     if (
       order.status !== OrderStatus.delivery_required &&
-      order.status !== OrderStatus.paid
+      order.status !== OrderStatus.paid &&
+      order.status !== OrderStatus.payment_pending &&
+      order.status !== OrderStatus.confirmed
     ) {
-      throw new BadRequestException('Order is not awaiting delivery');
+      throw new BadRequestException('Order is not ready for a transport request');
     }
 
     const existing = await this.prisma.transportRequest.findFirst({
@@ -215,6 +217,17 @@ export class LogisticsService {
       `Buyer requested Bit App transport for your order.`,
     );
 
+    if (
+      order.status === OrderStatus.payment_pending ||
+      order.status === OrderStatus.confirmed ||
+      order.status === OrderStatus.paid
+    ) {
+      await this.prisma.order.update({
+        where: { id: order.id },
+        data: { status: OrderStatus.delivery_required },
+      });
+    }
+
     await this.prisma.auditLog.create({
       data: {
         actorId: user.id,
@@ -286,7 +299,7 @@ export class LogisticsService {
         status: { in: OPEN_JOBS },
         deliveryMethod: DeliveryMethod.bit_app_transport,
       },
-      include: { order: true },
+      include: { order: true, vehicle: true, transporter: { select: { id: true, name: true, organizationName: true } } },
       orderBy: { createdAt: 'desc' },
     });
 
@@ -303,7 +316,12 @@ export class LogisticsService {
     if (user.role !== UserRole.transporter) throw new ForbiddenException();
     return this.prisma.transportRequest.findMany({
       where: { transporterId: user.id },
-      include: { order: true, vehicle: true, tracking: { orderBy: { createdAt: 'asc' } } },
+      include: {
+        order: true,
+        vehicle: true,
+        transporter: { select: { id: true, name: true, organizationName: true } },
+        tracking: { orderBy: { createdAt: 'asc' } },
+      },
       orderBy: { createdAt: 'desc' },
     });
   }
@@ -621,6 +639,7 @@ export class LogisticsService {
       where,
       include: {
         vehicle: true,
+        transporter: { select: { id: true, name: true, organizationName: true, phone: true } },
         payment: true,
         proof: true,
         tracking: { orderBy: { createdAt: 'asc' } },
